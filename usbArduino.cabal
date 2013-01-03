@@ -1,0 +1,29 @@
+Name:          usbArduino
+Version:       0.1
+Category:      Hardware
+Synopsis:      Communicate with your Arduino board over USB
+Description:   Communicate with your Arduino board over USB. Only supports Arduino-Uno at the time being.
+Copyright:     Levent Erkok, 2013
+License:       BSD3
+License-file:  LICENSE
+Stability:     Experimental
+Author:        Levent Erkok
+Homepage:      http://leventerkok.github.com/usbArduino/
+Bug-reports:   http://github.com/LeventErkok/usbArduino/issues
+Maintainer:    Levent Erkok (erkokl@gmail.com)
+Build-Type:    Simple
+Cabal-Version: >= 1.14
+Extra-Source-Files: INSTALL, README, COPYRIGHT, RELEASENOTES
+
+source-repository head
+    type:       git
+    location:   git://github.com/LeventErkok/usbArduino.git
+
+Executable usbArduino
+  default-language: Haskell2010
+  ghc-options     : -Wall
+  Build-depends   : base  >= 4 && < 5, usb, vector
+  main-is         : Hardware/USBArduino/Main.hs
+  Other-modules   : Hardware.USBArduino.Data
+                  , Hardware.USBArduino.KnownBoards
+                  , Hardware.USBArduino.LocateArduinos

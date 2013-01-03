@@ -1,0 +1,9 @@
+The usbArduino library can be installed simply by issuing cabal install
+like this:
+
+     cabal install sbv
+
+The package depends on the usb library itself, which in turn relies on
+the availability of the libusb package on your platform. See notes
+at https://github.com/basvandijk/bindings-libusb for details on how
+to get the latter.
