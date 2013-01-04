@@ -5,6 +5,7 @@ import Hardware.USBArduino.Data
 arduinoUnoR3 :: Board
 arduinoUnoR3 = Board {
           boardName       = "Arduino Uno R3"
+        , replPrompt      = "Uno"
         , deviceVendorId  = 0x2341
         , deviceProductId = 0x0043
         }

@@ -27,3 +27,4 @@ Executable usbArduino
   Other-modules   : Hardware.USBArduino.Data
                   , Hardware.USBArduino.KnownBoards
                   , Hardware.USBArduino.LocateArduinos
+                  , Hardware.USBArduino.Repl

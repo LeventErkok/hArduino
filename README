@@ -1,4 +1,8 @@
 usbArduino
 ==========
 
-Communicate with your Arduino board over USB 
+Communicate with your Arduino board over USB.
+
+Not operational by any means yet, still very much WIP. Currently:
+
+   * It can identify if an Arduino UNO is connected.
