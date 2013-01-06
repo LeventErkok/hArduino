@@ -1,7 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Hardware.HArduino.Comm where
 
-import Data.Char   (ord)
 import Data.Vector ((!))
 import System.USB
 import qualified Data.ByteString as B
@@ -34,7 +33,7 @@ withArduino debug f = do as <- locateArduinos debug
                let send str to = do
                        (_, status) <- writeInterrupt devHndl
                                                      (endpointAddress endpoint1)
-                                                     (B.pack (map (fromIntegral . ord) str))
+                                                     (B.pack str)
                                                      to
                        case status of
                          TimedOut  -> return False

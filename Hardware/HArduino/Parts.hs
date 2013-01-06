@@ -1,10 +1,12 @@
-module Hardware.HArduino.Parts where 
+module Hardware.HArduino.Parts where
 
-data Pin = Pin {pinVal :: Int}
+import Hardware.HArduino.Data
 
-instance Show Pin where
-  show (Pin i) | i < 10 = '0' : show i
-               | True   = show i
+data Pin = Pin Int
+         deriving Show
+
+instance Firmata Pin where
+  firmata (Pin i) = fromIntegral i
 
 -- 13 pins is UNO specific, should really have the board here
 pin :: Int -> Pin
@@ -16,10 +18,11 @@ data Mode = INPUT
           | ANALOG
           | PWM
           | SERVO
+          deriving Show
 
-instance Show Mode where
-  show INPUT  = "i"
-  show OUTPUT = "o"
-  show ANALOG = "a"
-  show PWM    = "p"
-  show SERVO  = "s"
+instance Firmata Mode where
+   firmata INPUT  = 0
+   firmata OUTPUT = 1
+   firmata ANALOG = 2
+   firmata PWM    = 3
+   firmata SERVO  = 4
