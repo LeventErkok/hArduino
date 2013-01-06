@@ -1,6 +1,6 @@
-module Hardware.HArduino.KnownBoards(knownBoards) where
+module System.Hardware.Arduino.KnownBoards(knownBoards) where
 
-import Hardware.HArduino.Data
+import System.Hardware.Arduino.Data
 
 arduinoUnoR3 :: Board
 arduinoUnoR3 = Board {

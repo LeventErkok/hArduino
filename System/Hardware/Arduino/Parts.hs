@@ -1,6 +1,6 @@
-module Hardware.HArduino.Parts where
+module System.Hardware.Arduino.Parts where
 
-import Hardware.HArduino.Data
+import System.Hardware.Arduino.Data
 
 data Pin = Pin Int
          deriving Show

@@ -1,13 +1,13 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Hardware.HArduino.Data where
+module System.Hardware.Arduino.Data where
 
 import Data.Word
 import Data.Maybe
-import qualified System.USB as USB
+import System.Hardware.Serialport
 
 data ArduinoChannel = ArduinoChannel {
-                  recv :: USB.Size -> USB.Timeout -> IO (Maybe String)
-                , send :: [Word8]  -> USB.Timeout -> IO Bool
+                  recv :: Int     -> IO String
+                , send :: [Word8] -> IO ()
                 }
 
 data Board = Board {
@@ -17,11 +17,10 @@ data Board = Board {
              }
 
 data Arduino = Arduino {
-                board      :: Board
-              , device     :: USB.Device
-              , deviceDesc :: USB.DeviceDesc
-              , context    :: USB.Ctx
-              , deviceChannel   :: Maybe ArduinoChannel
+                debug         :: String -> IO ()
+              , board         :: Board
+              , port          :: SerialPort
+              , deviceChannel :: Maybe ArduinoChannel
               }
 
 instance Show Arduino where
