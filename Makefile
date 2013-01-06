@@ -18,12 +18,12 @@ endef
 all: install
 
 install: $(DEPSRCS) Makefile
-	# @-ghc-pkg unregister hArduino
+	@-ghc-pkg unregister hArduino
 	$(call mkTags)
 	@$(CABAL) configure --disable-library-profiling
 	@(set -o pipefail; $(CABAL) build --ghc-options=-Werror 2>&1)
 	@$(CABAL) copy
-	# @$(CABAL) register
+	@$(CABAL) register
 
 test: install
 	@echo "*** Starting inline tests.."
@@ -32,7 +32,7 @@ sdist: install
 	@(set -o pipefail; $(CABAL) sdist)
 
 veryclean: clean
-	# @-ghc-pkg unregister hArduino
+	@-ghc-pkg unregister hArduino
 
 clean:
 	@rm -rf dist

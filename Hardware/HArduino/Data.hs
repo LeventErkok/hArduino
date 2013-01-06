@@ -1,13 +1,20 @@
 module Hardware.HArduino.Data where
 
 import Data.Word
+import qualified System.USB as USB
 
 data Board = Board {
                boardName       :: String
-             , replPrompt      :: String
              , deviceVendorId  :: Word16
              , deviceProductId :: Word16
              }
 
-instance Show Board where
-  show = boardName
+data Arduino = Arduino {
+                board      :: Board
+              , device     :: USB.Device
+              , deviceDesc :: USB.DeviceDesc
+              , context    :: USB.Ctx
+              }
+
+instance Show Arduino where
+  show = boardName . board
