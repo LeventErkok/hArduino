@@ -1,8 +1,8 @@
 Name:          hArduino
 Version:       0.1
 Category:      Hardware
-Synopsis:      Control with your Arduino board using Firmata
-Description:   Control with your Arduino board using Firmata over USB. Only supports Arduino-Uno at the time being.
+Synopsis:      Control your Arduino board from Haskell, using the Firmata protocol.
+Description:   Control your Arduino board from Haskell, using the Firmata protocol. Only supports Arduino-Uno at the time being.
 Copyright:     Levent Erkok, 2013
 License:       BSD3
 License-file:  LICENSE
