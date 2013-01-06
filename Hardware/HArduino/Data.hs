@@ -18,3 +18,8 @@ data Arduino = Arduino {
 
 instance Show Arduino where
   show = boardName . board
+
+data ArduinoChannel = ArduinoChannel {
+                  recv :: USB.Size -> USB.Timeout -> IO (Maybe String)
+                , send :: String   -> USB.Timeout -> IO Bool
+                }
