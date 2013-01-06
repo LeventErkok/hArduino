@@ -1,7 +1,7 @@
-usbArduino
+hArduino
 ==========
 
-Communicate with your Arduino board over USB.
+Communicate with your Arduino board over USB using the Firmata protocol.
 
 Not operational by any means yet, still very much WIP. Currently:
 

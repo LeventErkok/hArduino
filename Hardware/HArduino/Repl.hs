@@ -1,11 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Hardware.USBArduino.Repl(repl) where
+module Hardware.HArduino.Repl(repl) where
 
 import Control.Monad (unless)
 import System.IO
 import qualified System.USB as USB
 
-import Hardware.USBArduino.Data
+import Hardware.HArduino.Data
 
 repl :: (Board, USB.Device, USB.DeviceDesc) -> IO ()
 repl (b@Board{replPrompt}, _, _) = do

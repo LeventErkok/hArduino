@@ -1,4 +1,4 @@
-module Hardware.USBArduino.Data where
+module Hardware.HArduino.Data where
 
 import Data.Word
 

@@ -1,7 +1,7 @@
 module Main(main) where
 
-import Hardware.USBArduino.LocateArduinos
-import Hardware.USBArduino.Repl
+import Hardware.HArduino.LocateArduinos
+import Hardware.HArduino.Repl
 
 main :: IO ()
 main = do bs <- locateArduinos

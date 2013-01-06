@@ -1,6 +1,6 @@
-module Hardware.USBArduino.KnownBoards(knownBoards) where
+module Hardware.HArduino.KnownBoards(knownBoards) where
 
-import Hardware.USBArduino.Data
+import Hardware.HArduino.Data
 
 arduinoUnoR3 :: Board
 arduinoUnoR3 = Board {

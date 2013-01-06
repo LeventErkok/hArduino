@@ -1,11 +1,11 @@
 # (c) Copyright Levent Erkok. All rights reserved.
 #
-# The usbArduino library is distributed with the BSD3 license. See the LICENSE file
+# The hArduino library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
 TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs')
-LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_usbArduino.hs)
-DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_usbArduino.hs)
+LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_hArduino.hs)
+DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_hArduino.hs)
 CABAL     = cabal
 TIME      = /usr/bin/time
 
@@ -18,7 +18,7 @@ endef
 all: install
 
 install: $(DEPSRCS) Makefile
-	# @-ghc-pkg unregister usbArduino
+	# @-ghc-pkg unregister hArduino
 	$(call mkTags)
 	@$(CABAL) configure --disable-library-profiling
 	@(set -o pipefail; $(CABAL) build --ghc-options=-Werror 2>&1)
@@ -32,7 +32,7 @@ sdist: install
 	@(set -o pipefail; $(CABAL) sdist)
 
 veryclean: clean
-	# @-ghc-pkg unregister usbArduino
+	# @-ghc-pkg unregister hArduino
 
 clean:
 	@rm -rf dist
@@ -41,7 +41,7 @@ docs:
 	@(set -o pipefail; $(CABAL) haddock --executables --haddock-option=--no-warnings --hyperlink-source 2>&1)
 
 release: clean install sdist hlint test docs
-	@echo "*** usbArduino is ready for release!"
+	@echo "*** hArduino is ready for release!"
 
 hlint: install
 	@echo "Running HLint.."

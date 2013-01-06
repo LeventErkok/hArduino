@@ -1,7 +1,7 @@
-module Hardware.USBArduino.LocateArduinos(locateArduinos) where
+module Hardware.HArduino.LocateArduinos(locateArduinos) where
 
-import Hardware.USBArduino.Data
-import Hardware.USBArduino.KnownBoards
+import Hardware.HArduino.Data
+import Hardware.HArduino.KnownBoards
 
 import qualified System.USB  as USB
 import qualified Data.Vector as V
