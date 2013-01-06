@@ -15,13 +15,13 @@ withArduino debug f = do as <- locateArduinos debug
                            []  -> error "Cannot connect to Arduino."
                            _   -> error "Unsupported: Multiple Arduino's found."
  where withChannel arduino@Arduino{device} =
-         withDeviceHandle device             $ \devHndl ->
-         withDetachedKernelDriver devHndl 0  $ do
+         withDeviceHandle device              $ \devHndl ->
+          withDetachedKernelDriver devHndl 0  $
+           withClaimedInterface devHndl 0     $ do
                config0 <- getConfigDesc device 0
                let interface0 = configInterfaces config0 ! 0
                    alternate0 = interface0 ! 0
                    endpoint1  = interfaceEndpoints alternate0 ! 0
-
                let recv nb to = do
                        (bs, status) <- readInterrupt devHndl
                                                      (endpointAddress endpoint1)
