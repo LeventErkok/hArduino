@@ -1,34 +1,42 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Comm where
 
-import qualified Control.Exception as E
-import Data.Char     (chr)
+import Control.Monad (when)
 import qualified System.Hardware.Serialport as S
 import qualified Data.ByteString as B
 
 import System.Hardware.Arduino.Data
-import System.Hardware.Arduino.LocateArduino
+import System.Hardware.Arduino.Utils
+import System.Hardware.Arduino.Protocol
+import System.Hardware.Arduino.Firmata
 
-withArduino :: Bool -> FilePath -> (Arduino -> IO a) -> IO a
+withArduino :: Bool -> FilePath -> (Arduino -> IO ()) -> IO ()
 withArduino verbose fp f =
-        do mbA <- locateArduino verbose fp
-           case mbA of
-             Nothing -> error "Cannot connect to Arduino."
-             Just a@Arduino{debug, port}
-                -> E.bracket_ (return ())
-                              (do debug "Closing the serial port."
-                                  S.closeSerial port)
-                              (f (addChannels a))
- where addChannels arduino@Arduino{debug, port} = arduino{deviceChannel = Just (ArduinoChannel recv send)}
-          where recv cnt = do debug $ "Receiving " ++ show cnt ++ " bytes."
-                              b <- S.recv port cnt
-                              return $ map (chr . fromIntegral) $ B.unpack b
-                send msg = do let str = map (chr . fromIntegral) msg
-                              debug $ "Sending: " ++ show str
-                              sent <- S.send port $ B.pack msg
-                              case sent `compare` length msg of
-                                EQ -> return ()
-                                LT -> debug $  "Send failed, tried to send " ++ show (length msg)
-                                            ++ " but only " ++ show sent ++ " were sent."
-                                GT -> debug $  "Send failed, tried to send " ++ show (length msg)
-                                            ++ " but system reports " ++ show sent ++ " were sent."
+        do debug <- mkDebugPrinter verbose
+           debug $ "Accessing arduino located at: " ++ show fp
+           S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} (mkArduino debug)
+ where mkArduino debug port = do
+          let recv = do debug "Waiting for a Sysex response.."
+                        let skip = do b <- S.recv port 1
+                                      when (b /= B.pack [0xF0]) skip -- start message
+                            collect sofar = do b <- S.recv port 1
+                                               let rmsg = b : sofar
+                                               if b == B.pack [0xF7] -- end message
+                                                  then return $ reverse rmsg
+                                                  else collect rmsg
+                        skip
+                        b <- B.concat `fmap` collect [B.pack [0xF0]]
+                        let resp = unpackage b
+                        debug $ "Received: " ++ show resp
+                        return resp
+              send msg = do debug $ "Sending: " ++ show msg
+                            let p  = package msg
+                                lp = B.length p
+                            sent <- S.send port p
+                            when (sent /= lp)
+                                 (debug $ "Send failed. Tried: " ++ show lp ++ "bytes, reported: " ++ show sent)
+          let a = Arduino debug port "ID: Uninitialized" (Just (ArduinoChannel recv send))
+          r <- queryFirmware a
+          case r of
+            Firmware{} -> f a{firmataID = show r}
+            _          -> error $ "Got unexpected response for query firmware call: " ++ show r

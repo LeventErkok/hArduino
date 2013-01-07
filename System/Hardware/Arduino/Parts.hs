@@ -1,12 +1,7 @@
 module System.Hardware.Arduino.Parts where
 
-import System.Hardware.Arduino.Data
-
-data Pin = Pin Int
+data Pin = Pin {pinVal :: Int}
          deriving Show
-
-instance Firmata Pin where
-  firmata (Pin i) = fromIntegral i
 
 -- 13 pins is UNO specific, should really have the board here
 pin :: Int -> Pin
@@ -19,10 +14,3 @@ data Mode = INPUT
           | PWM
           | SERVO
           deriving Show
-
-instance Firmata Mode where
-   firmata INPUT  = 0
-   firmata OUTPUT = 1
-   firmata ANALOG = 2
-   firmata PWM    = 3
-   firmata SERVO  = 4
