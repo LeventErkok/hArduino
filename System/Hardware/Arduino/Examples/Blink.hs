@@ -14,6 +14,8 @@ blink fp = withArduino True fp go
   where led = pin 13
         go arduino = forever $ do
            setPinMode arduino led OUTPUT
+           b <- digitalRead arduino led
+           putStrLn $ "Led is currently: " ++ show b
            digitalWrite arduino led True
            threadDelay 1000
            digitalWrite arduino led False

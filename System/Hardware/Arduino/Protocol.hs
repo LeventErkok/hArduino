@@ -11,14 +11,22 @@ import Numeric   (showHex)
 
 data Request = QueryFirmware
              | SetPinMode    Pin Mode
+             | DigitalRead   Pin
              | DigitalWrite  Pin Bool
-             deriving Show
+
+instance Show Request where
+   show QueryFirmware      = "QueryFirmWare"
+   show (SetPinMode p m)   = "Set mode " ++ show p ++ " to " ++ show m
+   show (DigitalRead p)    = "DigitalRead " ++ show p
+   show (DigitalWrite p b) = "Set pin " ++ show p ++ " to " ++ (if b then " HIGH" else " LOW")
 
 data Response = Firmware Word8 Word8 String
+              | PinValue Bool
               | Unknown [Word8]
 
 instance Show Response where
   show (Firmware majV minV n) = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
+  show (PinValue v)           = "PinValue " ++ if v then "HIGH" else "LOW"
   show (Unknown bs)           = "Unknown [" ++ intercalate ", " (map showByte bs) ++ "]"
 
 cdStart, cdEnd :: Word8
@@ -26,8 +34,10 @@ cdStart = 0xf0
 cdEnd   = 0xf7
 
 package :: Request -> B.ByteString
-package QueryFirmware = B.pack [cdStart, 0x79, cdEnd]
-package _             = error "package: TBD"
+package QueryFirmware    = B.pack [cdStart, 0x79, cdEnd]
+package (SetPinMode p m) = B.pack [0xf4, pinVal p, fromIntegral (fromEnum m)]
+package (DigitalRead p)  = B.pack [0xd0 .|. pinVal p]
+package (DigitalWrite{}) = error "TBD"
 
 unpackage :: B.ByteString -> Response
 unpackage inp

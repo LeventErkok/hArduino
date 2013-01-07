@@ -18,7 +18,11 @@ withArduino verbose fp f =
  where mkArduino debug port = do
           let recv = do debug "Waiting for a Sysex response.."
                         let skip = do b <- S.recv port 1
-                                      when (b /= B.pack [0xF0]) skip -- start message
+                                      case B.unpack b of
+                                        []     -> skip
+                                        [0xF0] -> return ()
+                                        bs     -> do debug $ "Skipping bytes " ++ show (map showByte bs)
+                                                     skip
                             collect sofar = do b <- S.recv port 1
                                                let rmsg = b : sofar
                                                if b == B.pack [0xF7] -- end message
@@ -36,7 +40,5 @@ withArduino verbose fp f =
                             when (sent /= lp)
                                  (debug $ "Send failed. Tried: " ++ show lp ++ "bytes, reported: " ++ show sent)
           let a = Arduino debug port "ID: Uninitialized" (Just (ArduinoChannel recv send))
-          r <- queryFirmware a
-          case r of
-            Firmware{} -> f a{firmataID = show r}
-            _          -> error $ "Got unexpected response for query firmware call: " ++ show r
+          (v1, v2, m) <- queryFirmware a
+          f a{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"}
