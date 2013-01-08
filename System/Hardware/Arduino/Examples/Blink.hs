@@ -1,22 +1,24 @@
 module System.Hardware.Arduino.Examples.Blink where
 
-import Control.Concurrent (threadDelay)
-import Control.Monad      (forever)
+import Control.Monad      (forever, void)
 import System.Hardware.Arduino
 
--- Call it like this:
---
---      blink "/dev/cu.usbmodemfd131"
---
--- Where the file path is the device file the Arduino is connected to
-blink :: FilePath -> IO ()
-blink fp = withArduino True fp go
+-- threadDelay is broken on Mac!
+--   see: http://hackage.haskell.org/trac/ghc/ticket/7299
+-- so use sleep, jeez..
+import System.Process (system)
+
+sleep :: Int -> IO ()
+sleep n = void $ system $ "sleep " ++ show n
+
+blink :: IO ()
+blink = withArduino False "/dev/cu.usbmodemfd131" go
   where led = pin 13
         go arduino = forever $ do
            setPinMode arduino led OUTPUT
-           b <- digitalRead arduino led
-           putStrLn $ "Led is currently: " ++ show b
+           putStrLn "ON"
            digitalWrite arduino led True
-           threadDelay 1000
+           sleep 1
+           putStrLn "OFF"
            digitalWrite arduino led False
-           threadDelay 1000
+           sleep 1

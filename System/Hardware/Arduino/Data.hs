@@ -6,8 +6,9 @@ import System.Hardware.Serialport
 import System.Hardware.Arduino.Protocol
 
 data ArduinoChannel = ArduinoChannel {
-                  recv :: IO Response
-                , send :: Request -> IO ()
+                  recv  :: IO Response
+                , recvN :: Int -> IO Response
+                , send  :: Request -> IO ()
                 }
 
 data Arduino = Arduino {

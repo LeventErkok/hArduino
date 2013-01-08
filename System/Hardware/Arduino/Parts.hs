@@ -3,6 +3,10 @@ module System.Hardware.Arduino.Parts where
 import Data.Word
 
 data Pin = Pin { pinVal :: Word8 }
+         deriving Eq
+
+pinPort :: Pin -> (Int, Int)
+pinPort p = fromIntegral (pinVal p) `quotRem` 8
 
 instance Show Pin where
   show (Pin i) | i < 10 = "Pin0" ++ show i

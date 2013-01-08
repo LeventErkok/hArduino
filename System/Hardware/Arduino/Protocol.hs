@@ -4,40 +4,48 @@ import System.Hardware.Arduino.Parts
 
 import qualified Data.ByteString as B
 import Data.Bits
-import Data.Char (chr)
+import Data.Char (chr, isAscii, isAlphaNum, isSpace)
 import Data.List (intercalate)
 import Data.Word
-import Numeric   (showHex)
+import Numeric   (showHex, showIntAtBase)
 
 data Request = QueryFirmware
-             | SetPinMode    Pin Mode
-             | DigitalRead   Pin
-             | DigitalWrite  Pin Bool
+             | SetPinMode      Pin Mode
+             | DigitalRead     Pin
+             | DigitalPortWrite Int Word8 Word8
+
+showBin :: (Integral a, Show a) => a -> String
+showBin n = showIntAtBase 2 (head . show) n ""
 
 instance Show Request where
-   show QueryFirmware      = "QueryFirmWare"
-   show (SetPinMode p m)   = "Set mode " ++ show p ++ " to " ++ show m
-   show (DigitalRead p)    = "DigitalRead " ++ show p
-   show (DigitalWrite p b) = "Set pin " ++ show p ++ " to " ++ (if b then " HIGH" else " LOW")
+   show QueryFirmware            = "QueryFirmWare"
+   show (SetPinMode p m)         = "Set mode " ++ show p ++ " to " ++ show m
+   show (DigitalRead p)          = "DigitalRead " ++ show p
+   show (DigitalPortWrite p l m) = "Set port " ++ show p ++ " to " ++ showBin l ++ "_" ++ showBin m
 
-data Response = Firmware Word8 Word8 String
-              | PinValue Bool
+data Response = Firmware  Word8 Word8 String
+              | DigitalPinState Pin Mode Bool
+              | DigitalPortState Int Word16
               | Unknown [Word8]
 
 instance Show Response where
-  show (Firmware majV minV n) = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
-  show (PinValue v)           = "PinValue " ++ if v then "HIGH" else "LOW"
-  show (Unknown bs)           = "Unknown [" ++ intercalate ", " (map showByte bs) ++ "]"
+  show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
+  show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
+  show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
+  show (Unknown bs)            = "Unknown [" ++ intercalate ", " (map showByte bs) ++ "]"
 
 cdStart, cdEnd :: Word8
 cdStart = 0xf0
 cdEnd   = 0xf7
 
+sysEx :: [Word8] -> B.ByteString
+sysEx bs = B.pack $ cdStart : bs ++ [cdEnd]
+
 package :: Request -> B.ByteString
-package QueryFirmware    = B.pack [cdStart, 0x79, cdEnd]
-package (SetPinMode p m) = B.pack [0xf4, pinVal p, fromIntegral (fromEnum m)]
-package (DigitalRead p)  = B.pack [0xd0 .|. pinVal p]
-package (DigitalWrite{}) = error "TBD"
+package QueryFirmware            = sysEx  [0x79]
+package (SetPinMode p m)         = B.pack [0xf4, pinVal p, fromIntegral (fromEnum m)]
+package (DigitalRead p)          = sysEx  [0x6d, pinVal p]
+package (DigitalPortWrite p l m) = B.pack [0x90 .|. fromIntegral p, l, m]
 
 unpackage :: B.ByteString -> Response
 unpackage inp
@@ -49,12 +57,24 @@ unpackage inp
 
 getResponse :: [Word8] -> Response
 getResponse (rf : majV : minV : rest)
-  | rf == 0x79 = Firmware majV minV (getString rest)
+  | rf == 0x79
+  = Firmware majV minV (getString rest)
+getResponse (pr : pinNo : pinMode : pinState : [])
+  | pr == 0x6e
+  = DigitalPinState (pin (fromIntegral pinNo)) (toEnum (fromIntegral pinMode)) (pinState /= 0)
+getResponse (dpr : vL : vH : [])
+  | dpr .&. 0xF0 == 0x90
+  = let port = fromIntegral (dpr .&. 0x0F)
+        w    = fromIntegral ((vH .&. 0x7F) `shiftL` 8) .|. fromIntegral (vL .&. 0x7F)
+    in DigitalPortState port w
 getResponse bs = Unknown bs
 
 showByte :: Word8 -> String
-showByte i | i <= 0xf = "0x0" ++ showHex i ""
-           | True     = "0x"  ++ showHex i ""
+showByte i | isVisible = [c]
+           | i <= 0xf  = '0' : showHex i ""
+           | True      = showHex i ""
+  where c = chr $ fromIntegral i
+        isVisible = isAscii c && isAlphaNum c && isSpace c
 
 getString :: [Word8] -> String
 getString []         = ""
