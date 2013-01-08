@@ -8,5 +8,7 @@ This project is still very much WIP. Currently:
    * It can identify if an Arduino UNO is connected.
    * The blink example works! See: [Blink.hs](http://github.com/LeventErkok/hArduino/blob/master/System/Hardware/Arduino/Examples/Blink.hs)
 
-Most of the protocol remains unimplemented, and the current code is not worthy of
-a proper Hackage release yet. Patches and improvements are most welcome!
+Most of the firmata protocol is not yet unimplemented, and the current code is not quite worthy of
+a proper Hackage release yet. Blinking the led is pretty much all it can do for the time being.
+
+Patches and improvements are most welcome!
