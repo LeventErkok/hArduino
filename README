@@ -6,3 +6,4 @@ Control your Arduino board from Haskell, using the Firmata protocol.
 Not operational by any means yet, still very much WIP. Currently:
 
    * It can identify if an Arduino UNO is connected.
+   * The blink example works! See: [http://github.com/LeventErkok/hArduino/master/System/Hardware/Arduino/Examples/Blink.hs](Blink.hs)
