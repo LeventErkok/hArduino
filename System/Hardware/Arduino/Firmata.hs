@@ -38,8 +38,8 @@ digitalWrite arduino p v = do
         let ArduinoChannel{send} = getChannel arduino
             (port, idx) = pinPort p
             dr cp@(Pin i)
-             | i < 14   = digitalRead arduino cp
-             | True     = return (OUTPUT, False)
+             | i > 2 && i < 14 = digitalRead arduino cp
+             | True            = return (OUTPUT, False)
         oldVal <- map snd `fmap` mapM dr [Pin (fromIntegral (port * 8 + i)) | i <- [0 .. 7]]
         let [b0, b1, b2, b3, b4, b5, b6, b7] = [if i == idx then v else old | (old, i) <- zip oldVal [0 ..]]
             lsb = sum [1 `shiftL` i | (True, i) <- zip [b0, b1, b2, b3, b4, b5, b6, False] [0 .. 7]]

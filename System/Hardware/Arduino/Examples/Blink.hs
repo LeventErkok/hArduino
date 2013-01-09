@@ -23,7 +23,7 @@ sleep n = void $ system $ "sleep " ++ show n
 -- out a bunch of debug messages. Hopefully, it'll be useful.
 blink :: IO ()
 blink = withArduino False "/dev/cu.usbmodemfd131" go
-  where led = pin 13
+  where led = pin 7
         go arduino = do
                 setPinMode arduino led OUTPUT
                 forever $ do putStr "."
