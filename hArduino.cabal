@@ -24,12 +24,13 @@ Library
   ghc-options     : -Wall
 -- NB. process is only needed for "sleep", since
 -- threaddelay is broken on Mac. See: http://hackage.haskell.org/trac/ghc/ticket/7299
-  Build-depends   : base  >= 4 && < 5, serialport, bytestring, process
+  Build-depends   : base  >= 4 && < 5, serialport, bytestring, mtl, process
   Exposed-modules : System.Hardware.Arduino
                   , System.Hardware.Arduino.Examples.Blink
   Other-modules   : System.Hardware.Arduino.Comm
                   , System.Hardware.Arduino.Data
                   , System.Hardware.Arduino.Firmata
+                  , System.Hardware.Arduino.Firmata.Basics
                   , System.Hardware.Arduino.Protocol
                   , System.Hardware.Arduino.Parts
                   , System.Hardware.Arduino.Utils
