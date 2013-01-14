@@ -1,6 +1,6 @@
 hArduino
 ==========
-[![Build Status](https://secure.travis-ci.org/LeventErkok/hArduino.png?branch=master)](http://travis-ci.org/LeventErkok/hArduino)
+[![Build Status](https://travis-ci.org/LeventErkok/hArduino.png)](http://travis-ci.org/LeventErkok/hArduino)
 
 This project is still very much WIP. Currently:
 
