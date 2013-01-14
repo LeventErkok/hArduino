@@ -8,7 +8,7 @@ This project is still very much WIP. Currently:
    * You can blink the led on the Arduino Uno. See: [Blink.hs](http://github.com/LeventErkok/hArduino/blob/master/System/Hardware/Arduino/Examples/Blink.hs)
 
 Most of the firmata protocol is not yet implemented, and the current code is not quite worthy of
-a proper Hackage release yet. Blinking the led (the @hello world@ of the Arduino world)
+a proper Hackage release yet. Blinking the led (the `hello world` of the Arduino world)
 is pretty much all it can handle for the time being.
 
 Patches and improvements are most welcome!
