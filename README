@@ -1,7 +1,6 @@
 hArduino
 ==========
-
-Control your Arduino board from Haskell, using the [Firmata protocol](http://firmata.org/wiki/Main_Page).
+[![Build Status](https://secure.travis-ci.org/LeventErkok/hArduino.png?branch=master)](http://travis-ci.org/LeventErkok/hArduino)
 
 This project is still very much WIP. Currently:
 

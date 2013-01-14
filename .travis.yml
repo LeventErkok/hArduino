@@ -1,0 +1,6 @@
+language: haskell
+notifications:
+  email:
+    - erkokl@gmail.com
+  on_success: always
+  on_failure: always
