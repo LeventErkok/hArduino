@@ -14,6 +14,7 @@
 {-# LANGUAGE NamedFieldPuns              #-}
 module System.Hardware.Arduino.Data where
 
+import Control.Applicative              (Applicative)
 import Control.Monad.State              (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Maybe                       (fromMaybe)
 import System.Hardware.Serialport       (SerialPort)
@@ -37,7 +38,7 @@ data ArduinoState = ArduinoState {
 
 -- | The Arduino monad.
 newtype Arduino a = Arduino (StateT ArduinoState IO a)
-                  deriving (Functor, Monad, MonadIO, MonadState ArduinoState)
+                  deriving (Functor, Applicative, Monad, MonadIO, MonadState ArduinoState)
 
 -- | Retrieve the current channel.
 getChannel :: Arduino ArduinoChannel
