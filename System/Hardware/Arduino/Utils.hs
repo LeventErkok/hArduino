@@ -10,17 +10,26 @@
 -------------------------------------------------------------------------------
 module System.Hardware.Arduino.Utils where
 
-import Control.Monad (void)
+import Control.Concurrent (threadDelay)
+import Control.Monad      (void)
+import Data.Char          (isAlphaNum, isAscii, isSpace, chr)
+import Data.IORef         (newIORef, readIORef, writeIORef)
+import Data.Word          (Word8)
+import System.Process     (system)
+import System.Info        (os)
+import Numeric            (showHex, showIntAtBase, showFFloat)
 
-import Data.IORef
--- threadDelay is broken on Mac!
--- see: http://hackage.haskell.org/trac/ghc/ticket/7299
--- so use system/sleep, oh well.
-import System.Process (system)
+-- | Delay (wait) for the given number of milli-seconds
+-- NB. The 'threadDelay' function is broken on Mac, see <http://hackage.haskell.org/trac/ghc/ticket/7299>
+-- Until there's a new GHC release that fixes this issue, we temporarily use system/sleep on Mac.
+delay :: Int -> IO ()
+delay n
+  | os == "darwin"
+  = void $ system $ "sleep " ++ showFFloat (Just 2) (fromIntegral n / (1000 :: Double)) ""
+  | True
+  = threadDelay (n*1000)
 
-sleep :: Int -> IO ()
-sleep n = void $ system $ "sleep " ++ show n
-
+-- | A simple printer that can keep track of sequence numbers. Used for debugging purposes.
 mkDebugPrinter :: Bool -> IO (String -> IO ())
 mkDebugPrinter False = return (const (return ()))
 mkDebugPrinter True  = do
@@ -29,3 +38,15 @@ mkDebugPrinter True  = do
                      writeIORef cnt (i+1)
                      putStrLn $ "[" ++ show i ++ "] hArduino: " ++ s
         return f
+
+-- | Show a byte in a visible format.
+showByte :: Word8 -> String
+showByte i | isVisible = [c]
+           | i <= 0xf  = '0' : showHex i ""
+           | True      = showHex i ""
+  where c = chr $ fromIntegral i
+        isVisible = isAscii c && isAlphaNum c && isSpace c
+
+-- | Show a number as a binary value
+showBin :: (Integral a, Show a) => a -> String
+showBin n = showIntAtBase 2 (head . show) n ""

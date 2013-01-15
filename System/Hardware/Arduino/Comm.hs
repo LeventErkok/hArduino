@@ -12,16 +12,32 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Comm where
 
-import Control.Monad.State
-import qualified System.Hardware.Serialport as S
-import qualified Data.ByteString as B
+import Control.Monad.State (modify, runStateT, when)
+
+import qualified Data.ByteString            as B (pack, unpack, concat, length)
+import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Utils
 import System.Hardware.Arduino.Protocol
 import System.Hardware.Arduino.Firmata
 
-withArduino :: Bool -> FilePath -> Arduino () -> IO ()
+-- | Run the Haskell program to control the board:
+--
+--    * The file path argument should point to the device file that is
+--      associated with the board. ('COM1' on Windows,
+--      '/dev/cu.usbmodemfd131' on Mac, etc.)
+--
+--    * The boolean argument controls verbosity. It should remain
+--      'False' unless you have communication issues. The print-out
+--      is typically less-than-useful, but it might point to the root
+--      cause of the problem.
+--
+-- See "System.Hardware.Arduino.Examples.Blink" for a simple example.
+withArduino :: Bool       -- ^ If 'True', debugging info will be printed
+            -> FilePath   -- ^ Path to the USB port
+            -> Arduino () -- ^ The Haskell controller program to run
+            -> IO ()
 withArduino verbose fp program =
         do debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
@@ -29,9 +45,9 @@ withArduino verbose fp program =
                                        modify (\b -> b{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                _ <- runStateT controller (mkBoard debugger port)
+                _ <- runStateT controller (mkState debugger port)
                 return ()
- where mkBoard debugger port = Board debugger port "ID: Uninitialized" (Just (ArduinoChannel recvChan recvNChan sendChan))
+ where mkState debugger port = ArduinoState debugger port "ID: Uninitialized" (Just (ArduinoChannel recvChan recvNChan sendChan))
         where extract b = do let resp = unpackage b
                              debugger $ "Received: " ++ show resp
                              return resp

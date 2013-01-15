@@ -1,8 +1,17 @@
 Name:          hArduino
 Version:       0.1
 Category:      Hardware
-Synopsis:      Control your Arduino board from Haskell, using the Firmata protocol.
-Description:   Control your Arduino board from Haskell, using the Firmata protocol. Only supports Arduino-Uno at the time being.
+Synopsis:      Control your Arduino board from Haskell.
+Description:   Control Arduino from Haskell, using the Firmata protocol.
+               .
+               The hArduino library allows construction of Haskell programs that control
+               Arduino boards that are running the (freely available) Firmata program. Note
+               that hArduino does /not/ allow you to run arbitrary Haskell code on the
+               Arduino! It simply allows you to control a board from Haskell, where you
+               can exchange information with the board, send/receive commands from other
+               peripherals connected, etc.
+               .
+               hArduino is work-in-progress. Comments, bug-reports, and patches are welcome.
 Copyright:     Levent Erkok, 2013
 License:       BSD3
 License-file:  LICENSE

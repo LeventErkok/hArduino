@@ -13,14 +13,17 @@
 module System.Hardware.Arduino.Firmata.Basics where
 
 import Control.Monad.Trans (liftIO)
-import Data.Word
-import Data.Bits
+import Data.Word           (Word8)
+import Data.Bits           (shiftL)
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Parts
 import System.Hardware.Arduino.Protocol
-import System.Hardware.Arduino.Utils
+import qualified System.Hardware.Arduino.Utils as U
 
+-- | Retrieve the Firmata firmware version running on the Arduino. The first
+-- component is the major, second is the minor. The final value is a human
+-- readable identifier for the particular board.
 queryFirmware :: Arduino (Word8, Word8, String)
 queryFirmware = do
         send QueryFirmware
@@ -29,14 +32,16 @@ queryFirmware = do
           Firmware v1 v2 m -> return (v1, v2, m)
           _                -> error $ "Got unexpected response for query firmware call: " ++ show r
 
-
+-- | Delay the computaton for a given number of milli-seconds.
 delay :: Int -> Arduino ()
-delay n = liftIO $ sleep (n `div` 1000)
+delay = liftIO . U.delay
 
-setPinMode :: Pin -> Mode -> Arduino ()
+-- | Set the mode on a particular pin on the board.
+setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p m = send $ SetPinMode p m
 
-digitalRead :: Pin -> Arduino (Mode, Bool)
+-- | Read the value of a pin in digital mode.
+digitalRead :: Pin -> Arduino (PinMode, Bool)
 digitalRead p = do
         send $ DigitalRead p
         r <- recv
@@ -46,13 +51,14 @@ digitalRead p = do
                                     else error $ "Got unexpected response for " ++ show p' ++ " instead of " ++ show p
           _                -> error $ "Got unexpected response for query DigitalRead: " ++ show r
 
+-- | Set or clear a particular digital pin on the board.
 digitalWrite :: Pin -> Bool -> Arduino ()
 digitalWrite p v = do
         let (port, idx) = pinPort p
-            dr cp@(Pin i)
-             | i > 2 && i < 14 = digitalRead cp
+            dr n
+             | n > 2 && n < 14 = digitalRead (pin n)
              | True            = return (OUTPUT, False)
-        oldVal <- map snd `fmap` mapM dr [Pin (fromIntegral (port * 8 + i)) | i <- [0 .. 7]]
+        oldVal <- map snd `fmap` mapM dr [port * 8 + i | i <- [0 .. 7]]
         let [b0, b1, b2, b3, b4, b5, b6, b7] = [if i == idx then v else old | (old, i) <- zip oldVal [0 ..]]
             lsb = sum [1 `shiftL` i | (True, i) <- zip [b0, b1, b2, b3, b4, b5, b6, False] [0 .. 7]]
             msb = if b7 then 1 else 0
