@@ -1,3 +1,14 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Firmata.Basics
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Basic components of the firmata protocol
+-------------------------------------------------------------------------------
+
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Firmata.Basics where
 

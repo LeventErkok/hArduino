@@ -1,3 +1,11 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-------------------------------------------------------------------------------
 module System.Hardware.Arduino(
     Arduino
   , withArduino

@@ -1,3 +1,14 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Data
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Underlying data structures
+-------------------------------------------------------------------------------
+
 {-# LANGUAGE DeriveFunctor               #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE NamedFieldPuns              #-}

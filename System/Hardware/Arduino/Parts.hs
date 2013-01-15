@@ -1,3 +1,14 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Firmata.Parts
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Basic Arduino hardware abstractions, pins etc.
+-------------------------------------------------------------------------------
+
 module System.Hardware.Arduino.Parts where
 
 import Data.Word

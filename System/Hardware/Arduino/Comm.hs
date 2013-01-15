@@ -1,3 +1,14 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Comm
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Basic serial communication routines
+-------------------------------------------------------------------------------
+
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Comm where
 

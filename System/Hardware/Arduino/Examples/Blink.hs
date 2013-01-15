@@ -1,4 +1,13 @@
--- The mandatory "blink" example on Arduino
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Examples.Blink
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- The "hello world" of the arduino world, blinking the led
+-------------------------------------------------------------------------------
 
 module System.Hardware.Arduino.Examples.Blink where
 

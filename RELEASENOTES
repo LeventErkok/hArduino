@@ -1,9 +1,11 @@
-Hackage: Not yet released
-GitHub:  https://github.com/LeventErkok/hArduino
+Hackage: http://hackage.haskell.org/package/hArduino
+GitHub:  http://leventerkok.github.com/hArduino 
 
-Latest Hackage released version: Not yet released
+Latest Hackage released version: 0.1
 
 ======================================================================
-Version 0.1, Not yet released
+Version 0.1, 2013-01-14
 
- - Initial design, blink example
+ - Initial design
+ - Blink example operational
+ - Home page at: http://leventerkok.github.com/hArduino 

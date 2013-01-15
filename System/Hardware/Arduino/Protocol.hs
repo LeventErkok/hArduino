@@ -1,3 +1,14 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Protocol
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Internal representation of the firmata protocol.
+-------------------------------------------------------------------------------
+
 module System.Hardware.Arduino.Protocol where
 
 import System.Hardware.Arduino.Parts

@@ -1,3 +1,13 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.Utils
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Internal utilities
+-------------------------------------------------------------------------------
 module System.Hardware.Arduino.Utils where
 
 import Control.Monad (void)
