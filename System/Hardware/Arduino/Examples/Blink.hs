@@ -13,6 +13,8 @@ module System.Hardware.Arduino.Examples.Blink where
 
 import Control.Monad           (forever)
 import Control.Monad.Trans     (liftIO)
+import System.IO               (hSetBuffering, BufferMode(NoBuffering), stdout)
+
 import System.Hardware.Arduino
 
 -- | Blink the led connected to port 13 on the Arduino UNO board.
@@ -24,6 +26,7 @@ import System.Hardware.Arduino
 -- a useful diagnostic message.
 blink :: IO ()
 blink = withArduino False "/dev/cu.usbmodemfd131" $ do
+           liftIO $ hSetBuffering stdout NoBuffering
            let led = pin 13
            setPinMode led OUTPUT
            forever $ do liftIO $ putStr "."
