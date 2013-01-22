@@ -12,7 +12,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Comm where
 
-import Control.Monad.State (modify, runStateT, when)
+import Control.Concurrent   (myThreadId, throwTo)
+import Control.Exception    (tryJust, AsyncException(UserInterrupt))
+import Control.Monad.State  (modify, runStateT, when)
+import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
 import qualified Data.ByteString            as B (pack, unpack, concat, length)
 import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
@@ -39,15 +42,21 @@ withArduino :: Bool       -- ^ If 'True', debugging info will be printed
             -> Arduino () -- ^ The Haskell controller program to run
             -> IO ()
 withArduino verbose fp program =
-        do debugger <- mkDebugPrinter verbose
+        do tid <- myThreadId
+           _ <- installHandler keyboardSignal (Catch (throwTo tid UserInterrupt)) Nothing
+           debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
            let Arduino controller = do (v1, v2, m) <- queryFirmware
                                        modify (\b -> b{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                _ <- runStateT controller (mkState debugger port)
-                return ()
- where mkState debugger port = ArduinoState debugger port "ID: Uninitialized" (Just (ArduinoChannel recvChan recvNChan sendChan))
+                res <- tryJust catchCtrlC $ runStateT controller (mkState debugger port)
+                case res of
+                  Left () -> putStrLn "hArduino: Caught Ctrl-C, quitting.."
+                  _       -> return ()
+ where catchCtrlC UserInterrupt = Just ()
+       catchCtrlC _             = Nothing
+       mkState debugger port = ArduinoState debugger port "ID: Uninitialized" (Just (ArduinoChannel recvChan recvNChan sendChan))
         where extract b = do let resp = unpackage b
                              debugger $ "Received: " ++ show resp
                              return resp
