@@ -36,6 +36,7 @@ Library
   Build-depends   : base  >= 4 && < 5, serialport, bytestring, mtl, unix, process
   Exposed-modules : System.Hardware.Arduino
                   , System.Hardware.Arduino.Examples.Blink
+                  , System.Hardware.Arduino.Examples.Switch
   Other-modules   : System.Hardware.Arduino.Comm
                   , System.Hardware.Arduino.Data
                   , System.Hardware.Arduino.Firmata
