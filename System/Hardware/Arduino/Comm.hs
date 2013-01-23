@@ -58,7 +58,7 @@ withArduino verbose fp program =
        catchCtrlC _             = Nothing
        mkState debugger port = ArduinoState debugger port "ID: Uninitialized" (Just (ArduinoChannel recvChan recvNChan sendChan))
         where extract b = do let resp = unpackage b
-                             debugger $ "Received: " ++ show resp
+                             debugger $ "Received: <" ++ unwords (map showByte (B.unpack b)) ++ ">: " ++ show resp
                              return resp
               recvChan = do debugger "Waiting for a Sysex response.."
                             let skip = do b <- S.recv port 1
