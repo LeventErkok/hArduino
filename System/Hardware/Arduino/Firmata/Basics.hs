@@ -30,7 +30,7 @@ queryFirmware = do
         r <- recv
         case r of
           Firmware v1 v2 m -> return (v1, v2, m)
-          _                -> error $ "Got unexpected response for query firmware call: " ++ show r
+          _                -> error $ "queryFirmware: Got unexpected response for query firmware call: " ++ show r
 
 -- | Delay the computaton for a given number of milli-seconds.
 delay :: Int -> Arduino ()
@@ -41,15 +41,17 @@ setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p m = send $ SetPinMode p m
 
 -- | Read the value of a pin in digital mode.
-digitalRead :: Pin -> Arduino (PinMode, Bool)
+digitalRead :: Pin -> Arduino Bool
 digitalRead p = do
+        let (port, _) = pinPort p
+        send $ DigitalReport port True
         send $ DigitalRead p
         r <- recv
         case r of
-          DigitalPinState p' m b -> if p == p'
-                                    then return (m, b)
-                                    else error $ "Got unexpected response for " ++ show p' ++ " instead of " ++ show p
-          _                -> error $ "Got unexpected response for query DigitalRead: " ++ show r
+          DigitalPinState p' _ b -> if p == p'
+                                    then return b
+                                    else error $ "digitalRead: Got unexpected response for " ++ show p' ++ " instead of " ++ show p'
+          _                     -> error $ "digitalRead: Got unexpected response for query DigitalReport: " ++ show r
 
 -- | Set or clear a particular digital pin on the board.
 digitalWrite :: Pin -> Bool -> Arduino ()
@@ -57,8 +59,8 @@ digitalWrite p v = do
         let (port, idx) = pinPort p
             dr n
              | n > 2 && n < 14 = digitalRead (pin n)
-             | True            = return (OUTPUT, False)
-        oldVal <- map snd `fmap` mapM dr [port * 8 + i | i <- [0 .. 7]]
+             | True            = return False
+        oldVal <- mapM dr [port * 8 + i | i <- [0 .. 7]]
         let [b0, b1, b2, b3, b4, b5, b6, b7] = [if i == idx then v else old | (old, i) <- zip oldVal [0 ..]]
             lsb = sum [1 `shiftL` i | (True, i) <- zip [b0, b1, b2, b3, b4, b5, b6, False] [0 .. 7]]
             msb = if b7 then 1 else 0

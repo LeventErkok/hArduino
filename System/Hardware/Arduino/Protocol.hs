@@ -22,15 +22,17 @@ import System.Hardware.Arduino.Parts
 import System.Hardware.Arduino.Utils
 
 -- | A request, as sent to Arduino
-data Request = QueryFirmware                     -- ^ Query the Firmata version installed
-             | SetPinMode      Pin PinMode       -- ^ Set a pin to a particular mode
-             | DigitalRead     Pin               -- ^ Read the value of a given pin
-             | DigitalPortWrite Int Word8 Word8  -- ^ Write the values of pins on the given port; 2 bytes lo/hi
+data Request = QueryFirmware                      -- ^ Query the Firmata version installed
+             | SetPinMode       Pin PinMode       -- ^ Set a pin to a particular mode
+             | DigitalRead      Pin               -- ^ Read the value of a given pin
+             | DigitalReport    Int Bool          -- ^ Digital Report values on port enable/disable
+             | DigitalPortWrite Int Word8 Word8   -- ^ Write the values of pins on the given port; 2 bytes lo/hi
 
 instance Show Request where
    show QueryFirmware            = "QueryFirmWare"
    show (SetPinMode p m)         = "SetPinMode "   ++ show p ++ " to " ++ show m
    show (DigitalRead p)          = "DigitalRead "  ++ show p
+   show (DigitalReport p b)      = "DigitalReport "  ++ show p ++ (if b then " enabled" else " disabled")
    show (DigitalPortWrite p l h) = "DigitalWrite " ++ show p ++ " to " ++ showBin l ++ "_" ++ showBin h
 
 -- | A response, as returned from the Arduino
@@ -63,14 +65,15 @@ package :: Request -> B.ByteString
 package QueryFirmware            = sysEx  [0x79]
 package (SetPinMode p m)         = B.pack [0xf4, fromIntegral (pinNo p), fromIntegral (fromEnum m)]
 package (DigitalRead p)          = sysEx  [0x6d, fromIntegral (pinNo p)]
+package (DigitalReport p b)      = B.pack [0xd0 .|. fromIntegral p, if b then 1 else 0]
 package (DigitalPortWrite p l m) = B.pack [0x90 .|. fromIntegral p, l, m]
 
 -- | Unpackage a series of bytes as received from the board into a Response
 unpackage :: B.ByteString -> Response
 unpackage inp
-  | length bs < 2 || head bs /= cdStart || last bs /= cdEnd
-  = Unknown bs
-  | True
+  | length bs < 2 || head bs /= cdStart || last bs /= cdEnd   -- not sysex
+  = getResponse bs
+  | True        -- sysex; strip the markers
   = getResponse (init (tail bs))
   where bs = B.unpack inp
 
