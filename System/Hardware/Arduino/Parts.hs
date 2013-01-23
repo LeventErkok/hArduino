@@ -42,4 +42,4 @@ data PinMode = INPUT
              | ANALOG
              | PWM
              | SERVO
-             deriving (Show, Enum)
+             deriving (Eq, Show, Enum)
