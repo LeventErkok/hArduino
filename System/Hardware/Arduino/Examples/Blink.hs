@@ -25,7 +25,7 @@ import System.Hardware.Arduino
 -- to 'True' in the call to 'withArduino', which will hopefully print
 -- a useful diagnostic message.
 blink :: IO ()
-blink = withArduino False "/dev/cu.usbmodemfd131" $ do
+blink = withArduino True "/dev/cu.usbmodemfd131" $ do
            liftIO $ hSetBuffering stdout NoBuffering
            let led = pin 13
            setPinMode led OUTPUT

@@ -12,6 +12,7 @@ module System.Hardware.Arduino.Utils where
 
 import Control.Concurrent (threadDelay)
 import Control.Monad      (void)
+import Data.Bits          ((.|.), shiftL)
 import Data.Char          (isAlphaNum, isAscii, isSpace, chr)
 import Data.IORef         (newIORef, readIORef, writeIORef)
 import Data.Word          (Word8)
@@ -50,3 +51,10 @@ showByte i | isVisible = [c]
 -- | Show a number as a binary value
 showBin :: (Integral a, Show a) => a -> String
 showBin n = showIntAtBase 2 (head . show) n ""
+
+-- | Turn a lo/hi encoded Arduino string constant into a Haskell string
+getString :: [Word8] -> String
+getString []         = ""
+getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen, but no need to error out either
+getString (l:h:rest) = c : getString rest
+  where c = chr $ fromIntegral $ h `shiftL` 8 .|. l

@@ -12,18 +12,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Comm where
 
-import Control.Concurrent   (myThreadId, throwTo)
+import Control.Monad        (when, forever)
+import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, writeChan, readChan, forkIO)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
-import Control.Monad.State  (modify, runStateT, when)
+import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
-import qualified Data.ByteString            as B (pack, unpack, concat, length)
+import qualified Data.ByteString            as B (unpack, length)
 import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Utils
 import System.Hardware.Arduino.Protocol
-import System.Hardware.Arduino.Firmata
 
 -- | Run the Haskell program to control the board:
 --
@@ -46,48 +46,87 @@ withArduino verbose fp program =
            _ <- installHandler keyboardSignal (Catch (throwTo tid UserInterrupt)) Nothing
            debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
-           let Arduino controller = do (v1, v2, m) <- queryFirmware
-                                       modify (\b -> b{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
+           let Arduino controller = do initialize
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                res <- tryJust catchCtrlC $ runStateT controller (mkState debugger port)
+                bs <- newMVar BoardState
+                dc <- newChan
+                res <- tryJust catchCtrlC $ runStateT controller (ArduinoState debugger port "Uninitialized" bs dc)
                 case res of
                   Left () -> putStrLn "hArduino: Caught Ctrl-C, quitting.."
                   _       -> return ()
  where catchCtrlC UserInterrupt = Just ()
        catchCtrlC _             = Nothing
-       mkState debugger port = ArduinoState debugger port "ID: Uninitialized" (Just (ArduinoChannel recvChan recvNChan sendChan))
-        where extract b = do let resp = unpackage b
-                             debugger $ "Received: <" ++ unwords (map showByte (B.unpack b)) ++ ">: " ++ show resp
-                             return resp
-              recvChan = do debugger "Waiting for a Sysex response.."
-                            let skip = do b <- S.recv port 1
-                                          case B.unpack b of
-                                            []     -> skip
-                                            [0xF0] -> return ()
-                                            bs     -> do debugger $ "Skipping bytes <" ++ unwords (map showByte bs) ++ ">"
-                                                         skip
-                                collect sofar = do b <- S.recv port 1
-                                                   let rmsg = b : sofar
-                                                   if b == B.pack [0xF7] -- end message
-                                                      then return $ reverse rmsg
-                                                      else collect rmsg
-                            skip
-                            chunks <- collect [B.pack [0xF0]]
-                            extract $ B.concat chunks
-              recvNChan n = do debugger $ "Waiting for a non-Sysex response of " ++ show n ++ " bytes"
-                               let go need sofar
-                                    | need <= 0  = return sofar
-                                    | True       = do b <- S.recv port need
-                                                      case B.length b of
-                                                        0 -> go need sofar
-                                                        l -> do when (need < l) $ debugger $ "Received partial response: <" ++ unwords (map showByte (B.unpack b)) ++ ">"
-                                                                go (need - l) (b : sofar)
-                               chunks <- go n []
-                               extract $ B.concat $ reverse chunks
-              sendChan msg = do let p  = package msg
-                                    lp = B.length p
-                                debugger $ "Sending: " ++ show msg ++ " <" ++ unwords (map showByte (B.unpack p)) ++ ">"
-                                sent <- S.send port p
-                                when (sent /= lp)
-                                     (debugger $ "Send failed. Tried: " ++ show lp ++ "bytes, reported: " ++ show sent)
+
+-- | Send down a request.
+send :: Request -> Arduino ()
+send req = do debug $ "Sending: " ++ show req ++ " <" ++ unwords (map showByte (B.unpack p)) ++ ">"
+              serial <- gets port
+              sent <- liftIO $ S.send serial p
+              when (sent /= lp)
+                   (debug $ "Send failed. Tried: " ++ show lp ++ "bytes, reported: " ++ show sent)
+   where p  = package req
+         lp = B.length p
+
+-- | Receive a sys-ex response. This is a blocking call.
+recv :: Arduino Response
+recv = do ch <- gets deviceChannel
+          liftIO $ readChan ch
+
+-- | Start a thread to listen to the board and populate the channel with incoming queries.
+-- NB. This function is run in a thread; so be careful not to throw error or die otherwise
+-- in here.
+setupListener :: Arduino ()
+setupListener = do
+        serial <- gets port
+        dbg    <- gets message
+        chan   <- gets deviceChannel
+        let getBytes n = do let go need sofar
+                                 | need <= 0  = return $ reverse sofar
+                                 | True       = do b <- S.recv serial need
+                                                   case B.length b of
+                                                     0 -> go need sofar
+                                                     l -> go (need - l) (b : sofar)
+                            chunks <- go n []
+                            return $ concatMap B.unpack chunks
+            collectSysEx sofar = do [b] <- getBytes 1
+                                    if b == 0xF7 -- end sysex
+                                       then return $ reverse sofar
+                                       else collectSysEx (b : sofar)
+            listener = do [cmd] <- getBytes 1
+                          resp  <- case getFirmataCmd cmd of
+                                     START_SYSEX      -> do bs <- collectSysEx []
+                                                            case bs of
+                                                              []          -> return $ Unknown bs
+                                                              (sc:scargs) -> case (getSysExCommand sc, scargs) of
+                                                                               (REPORT_FIRMWARE, majV : minV : rest) -> return $ Firmware majV minV (getString rest)
+                                                                               _                 -> error $ "TBD/Sysex: " ++ showByte sc
+                                     ANALOG_MESSAGE _ -> do bs@[_lsb, _msb] <- getBytes 2
+                                                            let resp = Unknown bs
+                                                            dbg $ "ANALOG_MESSAGE Received: <" ++ unwords (map showByte (cmd:bs)) ++ ">: " ++ show resp
+                                                            return resp
+                                     PROTOCOL_VERSION -> do bs@[_lsb, _msb] <- getBytes 2
+                                                            let resp = Unknown bs
+                                                            dbg $ "PROTOCOL_VERSION Received: <" ++ unwords (map showByte (cmd:bs)) ++ ">: " ++ show resp
+                                                            return resp
+                                     _                 -> error $ "TBD/Firmata: " ++ showByte cmd
+                          case resp of
+                            Unknown _ -> return ()
+                            _         -> writeChan chan resp
+        tid <- liftIO $ forkIO $ forever listener
+        debug $ "Started listener thread: " ++ show tid
+
+-- | Initialize our board, get capabilities, set up comms
+initialize :: Arduino ()
+initialize = do setupListener
+                send QueryFirmware
+                dbg <- gets message
+                -- skip everything until we get a firmware response
+                let waitFW = do liftIO $ dbg "Waiting for Firmware response."
+                                r <- recv
+                                case r of
+                                  Firmware v1 v2 m -> do liftIO $ dbg $ "Got Firmware response " ++ show r
+                                                         modify (\b -> b{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
+                                  _                -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
+                                                         waitFW
+                waitFW

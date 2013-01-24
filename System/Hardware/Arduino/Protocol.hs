@@ -9,10 +9,9 @@
 -- Internal representation of the firmata protocol.
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Protocol(Request(..), Response(..), package, unpackage) where
+module System.Hardware.Arduino.Protocol(Request(..), Response(..), package) where
 
-import Data.Bits ((.|.), (.&.), shiftL)
-import Data.Char (chr)
+import Data.Bits ((.|.))
 import Data.List (intercalate)
 import Data.Word (Word8, Word16)
 
@@ -68,33 +67,18 @@ package (DigitalRead p)          = sysEx  [0x6d, fromIntegral (pinNo p)]
 package (DigitalReport p b)      = B.pack [0xd0 .|. fromIntegral p, if b then 1 else 0]
 package (DigitalPortWrite p l m) = B.pack [0x90 .|. fromIntegral p, l, m]
 
--- | Unpackage a series of bytes as received from the board into a Response
-unpackage :: B.ByteString -> Response
-unpackage inp
-  | length bs < 2 || head bs /= cdStart || last bs /= cdEnd   -- not sysex
-  = getResponse bs
-  | True        -- sysex; strip the markers
-  = getResponse (init (tail bs))
-  where bs = B.unpack inp
-
--- | Parse a response message. TBD: Use a proper (cereal based?) parser.
-getResponse :: [Word8] -> Response
-getResponse (rf : majV : minV : rest)
+{-
+unpackage :: [Word8] -> Response
+unpackage (rf : majV : minV : rest)
   | rf == 0x79
   = Firmware majV minV (getString rest)
-getResponse (pr : curPin : pinMode : pinState : [])
+unpackage (pr : curPin : pinMode : pinState : [])
   | pr == 0x6e
   = DigitalPinState (pin (fromIntegral curPin)) (toEnum (fromIntegral pinMode)) (pinState /= 0)
-getResponse (dpr : vL : vH : [])
+unpackage (dpr : vL : vH : [])
   | dpr .&. 0xF0 == 0x90
   = let port = fromIntegral (dpr .&. 0x0F)
         w    = fromIntegral ((vH .&. 0x7F) `shiftL` 8) .|. fromIntegral (vL .&. 0x7F)
     in DigitalPortState port w
-getResponse bs = Unknown bs
-
--- | Turn a lo/hi encoded Arduino string constant into a Haskell string
-getString :: [Word8] -> String
-getString []         = ""
-getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen, but no need to error out either
-getString (l:h:rest) = c : getString rest
-  where c = chr $ fromIntegral $ h `shiftL` 8 .|. l
+unpackage bs = Unknown bs
+-}

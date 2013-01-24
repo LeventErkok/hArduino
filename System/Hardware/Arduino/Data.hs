@@ -14,53 +14,105 @@
 {-# LANGUAGE NamedFieldPuns              #-}
 module System.Hardware.Arduino.Data where
 
-import Control.Applicative              (Applicative)
-import Control.Monad.State              (StateT, MonadIO, MonadState, gets, liftIO)
-import Data.Maybe                       (fromMaybe)
-import System.Hardware.Serialport       (SerialPort)
+import Control.Applicative        (Applicative)
+import Control.Concurrent         (Chan, MVar)
+import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
+import Data.Bits                  ((.&.))
+import Data.Word                  (Word8)
+import System.Hardware.Serialport (SerialPort)
 
 import System.Hardware.Arduino.Protocol
+import System.Hardware.Arduino.Utils
 
--- | Basic communication channel with the board.
-data ArduinoChannel = ArduinoChannel {
-                  recvChan  :: IO Response              -- ^ Receive a sys-ex response.
-                , recvNChan :: Int -> IO Response       -- ^ Receive a non-sys-ex response that has /n/ bytes in it
-                , sendChan  :: Request -> IO ()         -- ^ Send a request down to Arduino
+-- | State of the board
+data BoardState = BoardState {
                 }
 
--- | State of the board and other machinery.
+-- | State of the computation
 data ArduinoState = ArduinoState {
-                message       :: String -> IO ()        -- ^ Current debugging routine
-              , port          :: SerialPort             -- ^ Port we are communicating on
-              , firmataID     :: String                 -- ^ The ID of the board (as identified by the Board itself)
-              , deviceChannel :: Maybe ArduinoChannel   -- ^ Communication channel
+                message       :: String -> IO ()     -- ^ Current debugging routine
+              , port          :: SerialPort          -- ^ Serial port we are communicating on
+              , firmataID     :: String    -- ^ The ID of the board (as identified by the Board itself)
+              , boardState    :: MVar BoardState     -- ^ Current state of the board
+              , deviceChannel :: Chan Response       -- ^ Incoming messages from the board
               }
 
 -- | The Arduino monad.
 newtype Arduino a = Arduino (StateT ArduinoState IO a)
                   deriving (Functor, Applicative, Monad, MonadIO, MonadState ArduinoState)
 
--- | Retrieve the current channel.
-getChannel :: Arduino ArduinoChannel
-getChannel = fromMaybe die `fmap` gets deviceChannel
-  where die = error "Cannot communicate with the board!"
-
--- | Send down a request.
-send :: Request -> Arduino ()
-send r = do ArduinoChannel{sendChan} <- getChannel
-            liftIO $ sendChan r
-
--- | Receive a sys-ex response.
-recv :: Arduino Response
-recv = do ArduinoChannel{recvChan} <- getChannel
-          liftIO recvChan
-
--- | Receive a non-sys-ex response, that has /n/ bytes
-recvN :: Int -> Arduino Response
-recvN n = do ArduinoChannel{recvNChan} <- getChannel
-             liftIO $ recvNChan n
-
--- | Debugging only: print it on stdout.
+-- | Debugging only: print the given string on stdout.
 debug :: String -> Arduino ()
 debug s = do f <- gets message
              liftIO $ f s
+
+-- | Firmata commands, see: http://firmata.org/wiki/Protocol#Message_Types
+data FirmataCmd = ANALOG_MESSAGE      Int -- ^ @0xE0@ pin
+                | DIGITAL_MESSAGE     Int -- ^ @0x90@ port
+                | REPORT_ANALOG_PIN   Int -- ^ @0xC0@ pin
+                | REPORT_DIGITAL_PORT Int -- ^ @0xD0@ port
+                | START_SYSEX             -- ^ @0xF0@
+                | SET_PIN_MODE            -- ^ @0xF4@
+                | END_SYSEX               -- ^ @0xF7@
+                | PROTOCOL_VERSION        -- ^ @0xF9@
+                | SYSTEM_RESET            -- ^ @0xFF@
+                deriving Show
+
+-- | Convert a byte to a Firmata command
+getFirmataCmd :: Word8 -> FirmataCmd
+getFirmataCmd w = classify
+  where extract m | w .&. m == m = Just $ fromIntegral (w .&. 0x0F)
+                  | True         = Nothing
+        classify | w == 0xF0              = START_SYSEX
+                 | w == 0xF4              = SET_PIN_MODE
+                 | w == 0xF7              = END_SYSEX
+                 | w == 0xF9              = PROTOCOL_VERSION
+                 | w == 0xFF              = SYSTEM_RESET
+                 | Just i <- extract 0xE0 = ANALOG_MESSAGE      i
+                 | Just i <- extract 0x90 = DIGITAL_MESSAGE     i
+                 | Just i <- extract 0xC0 = REPORT_ANALOG_PIN   i
+                 | Just i <- extract 0xD0 = REPORT_DIGITAL_PORT i
+                 | True                   = error $ "hArduino: Received unknown command word: " ++ showByte w
+
+-- | Sys-ex commands, see: http://firmata.org/wiki/Protocol#Sysex_Message_Format
+data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
+              | ANALOG_MAPPING_QUERY    -- ^ @0x69@  ask for mapping of analog to pin numbers
+              | ANALOG_MAPPING_RESPONSE -- ^ @0x6A@  reply with mapping info
+              | CAPABILITY_QUERY        -- ^ @0x6B@  ask for supported modes and resolution of all pins
+              | CAPABILITY_RESPONSE     -- ^ @0x6C@  reply with supported modes and resolution
+              | PIN_STATE_QUERY         -- ^ @0x6D@  ask for a pin's current mode and value
+              | PIN_STATE_RESPONSE      -- ^ @0x6E@  reply with a pin's current mode and value
+              | EXTENDED_ANALOG         -- ^ @0x6F@  analog write (PWM, Servo, etc) to any pin
+              | SERVO_CONFIG            -- ^ @0x70@  set max angle, minPulse, maxPulse, freq
+              | STRING_DATA             -- ^ @0x71@  a string message with 14-bits per char
+              | SHIFT_DATA              -- ^ @0x75@  shiftOut config/data message (34 bits)
+              | I2C_REQUEST             -- ^ @0x76@  I2C request messages from a host to an I/O board
+              | I2C_REPLY               -- ^ @0x77@  I2C reply messages from an I/O board to a host
+              | I2C_CONFIG              -- ^ @0x78@  Configure special I2C settings such as power pins and delay times
+              | REPORT_FIRMWARE         -- ^ @0x79@  report name and version of the firmware
+              | SAMPLING_INTERVAL       -- ^ @0x7A@  sampling interval
+              | SYSEX_NON_REALTIME      -- ^ @0x7E@  MIDI Reserved for non-realtime messages
+              | SYSEX_REALTIME          -- ^ @0x7F@  MIDI Reserved for realtime messages
+              deriving Show
+
+-- | Convert a byte into a 'SysExCmd'
+getSysExCommand :: Word8 -> SysExCmd
+getSysExCommand 0x00 = RESERVED_COMMAND
+getSysExCommand 0x69 = ANALOG_MAPPING_QUERY
+getSysExCommand 0x6A = ANALOG_MAPPING_RESPONSE
+getSysExCommand 0x6B = CAPABILITY_QUERY
+getSysExCommand 0x6C = CAPABILITY_RESPONSE
+getSysExCommand 0x6D = PIN_STATE_QUERY
+getSysExCommand 0x6E = PIN_STATE_RESPONSE
+getSysExCommand 0x6F = EXTENDED_ANALOG
+getSysExCommand 0x70 = SERVO_CONFIG
+getSysExCommand 0x71 = STRING_DATA
+getSysExCommand 0x75 = SHIFT_DATA
+getSysExCommand 0x76 = I2C_REQUEST
+getSysExCommand 0x77 = I2C_REPLY
+getSysExCommand 0x78 = I2C_CONFIG
+getSysExCommand 0x79 = REPORT_FIRMWARE
+getSysExCommand 0x7A = SAMPLING_INTERVAL
+getSysExCommand 0x7E = SYSEX_NON_REALTIME
+getSysExCommand 0x7F = SYSEX_REALTIME
+getSysExCommand n    = error $ "hArduino: Received unknown sysex command word: " ++ showByte n
