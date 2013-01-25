@@ -13,7 +13,7 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, writeChan, readChan, forkIO)
+import Control.Concurrent   (myThreadId, throwTo, newChan, newEmptyMVar, modifyMVar_, writeChan, readChan, forkIO)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
@@ -49,7 +49,7 @@ withArduino verbose fp program =
            let Arduino controller = do initialize
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                bs <- newMVar BoardState
+                bs <- newEmptyMVar
                 dc <- newChan
                 res <- tryJust catchCtrlC $ runStateT controller (ArduinoState debugger port "Uninitialized" bs dc)
                 case res of
@@ -118,15 +118,28 @@ setupListener = do
 
 -- | Initialize our board, get capabilities, set up comms
 initialize :: Arduino ()
-initialize = do setupListener
-                send QueryFirmware
-                dbg <- gets message
-                -- skip everything until we get a firmware response
-                let waitFW = do liftIO $ dbg "Waiting for Firmware response."
-                                r <- recv
-                                case r of
-                                  Firmware v1 v2 m -> do liftIO $ dbg $ "Got Firmware response " ++ show r
-                                                         modify (\b -> b{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
-                                  _                -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
-                                                         waitFW
-                waitFW
+initialize = do
+     dbg <- gets message
+     -- Step 1: Set up the listener thread
+     setupListener
+     -- Step 2: Send query-firmware, and wait until we get a response
+     send QueryFirmware
+     let waitFW = do liftIO $ dbg "Waiting for Firmware response."
+                     r <- recv
+                     case r of
+                       Firmware v1 v2 m -> do liftIO $ dbg $ "Got Firmware response " ++ show r
+                                              modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
+                       _                -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
+                                              waitFW
+     waitFW
+     -- Step 3: Send a capabilities request
+     send CapabilityQuery
+     let waitCQ = do liftIO $ dbg "Waiting for capabilities request."
+                     r <- recv
+                     case r of
+                       Capabilities c -> do liftIO $ dbg "Got capabilities response!"
+                                            s <- gets boardState
+                                            liftIO $ modifyMVar_ s (\b -> return (b{capabilities = c}))
+                       _              -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
+                                            waitCQ
+     waitCQ

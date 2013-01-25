@@ -18,7 +18,6 @@ import Data.Bits           (shiftL)
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Parts
-import System.Hardware.Arduino.Protocol
 import System.Hardware.Arduino.Comm
 import qualified System.Hardware.Arduino.Utils as U
 

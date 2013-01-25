@@ -17,15 +17,51 @@ module System.Hardware.Arduino.Data where
 import Control.Applicative        (Applicative)
 import Control.Concurrent         (Chan, MVar)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
-import Data.Bits                  ((.&.))
-import Data.Word                  (Word8)
+import Data.Bits                  ((.&.), (.|.))
+import Data.List                  (intercalate)
+import Data.Word                  (Word8, Word16)
 import System.Hardware.Serialport (SerialPort)
 
-import System.Hardware.Arduino.Protocol
 import System.Hardware.Arduino.Utils
+import System.Hardware.Arduino.Parts hiding (pin)
+
+-- | A request, as sent to Arduino
+data Request = QueryFirmware                      -- ^ Query the Firmata version installed
+             | CapabilityQuery                    -- ^ Query the capabilities of the board
+             | SetPinMode       Pin PinMode       -- ^ Set a pin to a particular mode
+             | DigitalRead      Pin               -- ^ Read the value of a given pin
+             | DigitalReport    Word8 Bool        -- ^ Digital Report values on port enable/disable
+             | DigitalPortWrite Word8 Word8 Word8 -- ^ Write the values of pins on the given port; 2 bytes lo/hi
+
+instance Show Request where
+   show QueryFirmware            = "QueryFirmWare"
+   show CapabilityQuery          = "CapabilityQuery"
+   show (SetPinMode p m)         = "SetPinMode "   ++ show p ++ " to " ++ show m
+   show (DigitalRead p)          = "DigitalRead "  ++ show p
+   show (DigitalReport p b)      = "DigitalReport "  ++ show p ++ (if b then " enabled" else " disabled")
+   show (DigitalPortWrite p l h) = "DigitalWrite " ++ show p ++ " to " ++ showBin l ++ "_" ++ showBin h
+
+-- | A response, as returned from the Arduino
+data Response = Firmware  Word8 Word8 String       -- ^ Firmware version (maj/min and indentifier
+              | DigitalPinState Pin PinMode Bool   -- ^ State of a given pin
+              | DigitalPortState Int Word16        -- ^ State of a given port
+              | Capabilities BoardCapabilities     -- ^ Capabilities report
+              | Unknown [Word8]                    -- ^ Represents messages currently unsupported
+
+instance Show Response where
+  show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
+  show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
+  show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
+  show (Capabilities b)        = "Capabilities " ++ show b
+  show (Unknown bs)            = "Unknown [" ++ intercalate ", " (map showByte bs) ++ "]"
+
+
+-- | What the board is capable of and current settings
+type BoardCapabilities = ()
 
 -- | State of the board
 data BoardState = BoardState {
+                   capabilities :: BoardCapabilities
                 }
 
 -- | State of the computation
@@ -47,16 +83,28 @@ debug s = do f <- gets message
              liftIO $ f s
 
 -- | Firmata commands, see: http://firmata.org/wiki/Protocol#Message_Types
-data FirmataCmd = ANALOG_MESSAGE      Int -- ^ @0xE0@ pin
-                | DIGITAL_MESSAGE     Int -- ^ @0x90@ port
-                | REPORT_ANALOG_PIN   Int -- ^ @0xC0@ pin
-                | REPORT_DIGITAL_PORT Int -- ^ @0xD0@ port
-                | START_SYSEX             -- ^ @0xF0@
-                | SET_PIN_MODE            -- ^ @0xF4@
-                | END_SYSEX               -- ^ @0xF7@
-                | PROTOCOL_VERSION        -- ^ @0xF9@
-                | SYSTEM_RESET            -- ^ @0xFF@
+data FirmataCmd = ANALOG_MESSAGE      Word8 -- ^ @0xE0@ pin
+                | DIGITAL_MESSAGE     Word8 -- ^ @0x90@ port
+                | REPORT_ANALOG_PIN   Word8 -- ^ @0xC0@ pin
+                | REPORT_DIGITAL_PORT Word8 -- ^ @0xD0@ port
+                | START_SYSEX               -- ^ @0xF0@
+                | SET_PIN_MODE              -- ^ @0xF4@
+                | END_SYSEX                 -- ^ @0xF7@
+                | PROTOCOL_VERSION          -- ^ @0xF9@
+                | SYSTEM_RESET              -- ^ @0xFF@
                 deriving Show
+
+-- | Compute the numeric value of a command
+firmataCmdVal :: FirmataCmd -> Word8
+firmataCmdVal (ANALOG_MESSAGE      pin ) = 0xE0 .|. pin
+firmataCmdVal (DIGITAL_MESSAGE     port) = 0x90 .|. port
+firmataCmdVal (REPORT_ANALOG_PIN   pin ) = 0xC0 .|. pin
+firmataCmdVal (REPORT_DIGITAL_PORT port) = 0xD0 .|. port
+firmataCmdVal START_SYSEX                = 0xF0
+firmataCmdVal SET_PIN_MODE               = 0xF4
+firmataCmdVal END_SYSEX                  = 0xF7
+firmataCmdVal PROTOCOL_VERSION           = 0xF9
+firmataCmdVal SYSTEM_RESET               = 0xFF
 
 -- | Convert a byte to a Firmata command
 getFirmataCmd :: Word8 -> FirmataCmd
@@ -94,6 +142,27 @@ data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a ch
               | SYSEX_NON_REALTIME      -- ^ @0x7E@  MIDI Reserved for non-realtime messages
               | SYSEX_REALTIME          -- ^ @0x7F@  MIDI Reserved for realtime messages
               deriving Show
+
+-- | Convert a 'SysExCmd' to a byte
+sysExCmdVal :: SysExCmd -> Word8
+sysExCmdVal RESERVED_COMMAND        = 0x00
+sysExCmdVal ANALOG_MAPPING_QUERY    = 0x69
+sysExCmdVal ANALOG_MAPPING_RESPONSE = 0x6A
+sysExCmdVal CAPABILITY_QUERY        = 0x6B
+sysExCmdVal CAPABILITY_RESPONSE     = 0x6C
+sysExCmdVal PIN_STATE_QUERY         = 0x6D
+sysExCmdVal PIN_STATE_RESPONSE      = 0x6E
+sysExCmdVal EXTENDED_ANALOG         = 0x6F
+sysExCmdVal SERVO_CONFIG            = 0x70
+sysExCmdVal STRING_DATA             = 0x71
+sysExCmdVal SHIFT_DATA              = 0x75
+sysExCmdVal I2C_REQUEST             = 0x76
+sysExCmdVal I2C_REPLY               = 0x77
+sysExCmdVal I2C_CONFIG              = 0x78
+sysExCmdVal REPORT_FIRMWARE         = 0x79
+sysExCmdVal SAMPLING_INTERVAL       = 0x7A
+sysExCmdVal SYSEX_NON_REALTIME      = 0x7E
+sysExCmdVal SYSEX_REALTIME          = 0x7F
 
 -- | Convert a byte into a 'SysExCmd'
 getSysExCommand :: Word8 -> SysExCmd

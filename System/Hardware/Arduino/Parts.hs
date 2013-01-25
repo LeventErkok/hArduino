@@ -11,8 +11,10 @@
 
 module System.Hardware.Arduino.Parts(PinMode(..), Pin, pin, pinNo, pinPort) where
 
+import Data.Word (Word8)
+
 -- | A pin on the Arduino
-data Pin = Pin { pinNo :: Int   -- ^ The pin number
+data Pin = Pin { pinNo :: Word8   -- ^ The pin number
                }
          deriving Eq
 
@@ -27,13 +29,13 @@ instance Show Pin where
 --
 --     * 13 pins is UNO specific, we will need to expand this definition if
 --       we start supporting other boards.
-pin :: Int -> Pin
+pin :: Word8 -> Pin
 pin i | i < 2 || i > 13 = error $ "Invalid pin number: " ++ show i
       | True            = Pin i
 
 -- | On the Arduino, pins are grouped into banks of 8.
 -- Given a pin, this function determines which port/index it belongs to
-pinPort :: Pin -> (Int, Int)
+pinPort :: Pin -> (Word8, Word8)
 pinPort p = pinNo p `quotRem` 8
 
 -- | The mode for a pin.
