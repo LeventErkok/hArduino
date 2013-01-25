@@ -90,29 +90,18 @@ setupListener = do
                             chunks <- go n []
                             return $ concatMap B.unpack chunks
             collectSysEx sofar = do [b] <- getBytes 1
-                                    if b == 0xF7 -- end sysex
+                                    if b == firmataCmdVal END_SYSEX
                                        then return $ reverse sofar
                                        else collectSysEx (b : sofar)
             listener = do [cmd] <- getBytes 1
                           resp  <- case getFirmataCmd cmd of
-                                     START_SYSEX      -> do bs <- collectSysEx []
-                                                            case bs of
-                                                              []          -> return $ Unknown bs
-                                                              (sc:scargs) -> case (getSysExCommand sc, scargs) of
-                                                                               (REPORT_FIRMWARE, majV : minV : rest) -> return $ Firmware majV minV (getString rest)
-                                                                               _                 -> error $ "TBD/Sysex: " ++ showByte sc
-                                     ANALOG_MESSAGE _ -> do bs@[_lsb, _msb] <- getBytes 2
-                                                            let resp = Unknown bs
-                                                            dbg $ "ANALOG_MESSAGE Received: <" ++ unwords (map showByte (cmd:bs)) ++ ">: " ++ show resp
-                                                            return resp
-                                     PROTOCOL_VERSION -> do bs@[_lsb, _msb] <- getBytes 2
-                                                            let resp = Unknown bs
-                                                            dbg $ "PROTOCOL_VERSION Received: <" ++ unwords (map showByte (cmd:bs)) ++ ">: " ++ show resp
-                                                            return resp
-                                     _                 -> error $ "TBD/Firmata: " ++ showByte cmd
+                                     Left  unknown     -> return $ Unimplemented (Just (show unknown)) []
+                                     Right START_SYSEX -> unpackageSysEx `fmap` collectSysEx []
+                                     Right nonSysEx    -> unpackageNonSysEx getBytes nonSysEx
                           case resp of
-                            Unknown _ -> return ()
-                            _         -> writeChan chan resp
+                            Unimplemented{} -> dbg $ "Ignoring the received response: " ++ show resp
+                            _               -> do dbg $ "Received " ++ show resp
+                                                  writeChan chan resp
         tid <- liftIO $ forkIO $ forever listener
         debug $ "Started listener thread: " ++ show tid
 
@@ -127,7 +116,7 @@ initialize = do
      let waitFW = do liftIO $ dbg "Waiting for Firmware response."
                      r <- recv
                      case r of
-                       Firmware v1 v2 m -> do liftIO $ dbg $ "Got Firmware response " ++ show r
+                       Firmware v1 v2 m -> do liftIO $ dbg $ "Got Firmware response: " ++ show r
                                               modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
                        _                -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
                                               waitFW

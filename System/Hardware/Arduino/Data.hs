@@ -19,6 +19,7 @@ import Control.Concurrent         (Chan, MVar)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.))
 import Data.List                  (intercalate)
+import Data.Maybe                 (fromMaybe)
 import Data.Word                  (Word8, Word16)
 import System.Hardware.Serialport (SerialPort)
 
@@ -42,19 +43,18 @@ instance Show Request where
    show (DigitalPortWrite p l h) = "DigitalWrite " ++ show p ++ " to " ++ showBin l ++ "_" ++ showBin h
 
 -- | A response, as returned from the Arduino
-data Response = Firmware  Word8 Word8 String       -- ^ Firmware version (maj/min and indentifier
-              | DigitalPinState Pin PinMode Bool   -- ^ State of a given pin
-              | DigitalPortState Int Word16        -- ^ State of a given port
-              | Capabilities BoardCapabilities     -- ^ Capabilities report
-              | Unknown [Word8]                    -- ^ Represents messages currently unsupported
+data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/min and indentifier
+              | DigitalPinState Pin PinMode Bool     -- ^ State of a given pin
+              | DigitalPortState Int Word16          -- ^ State of a given port
+              | Capabilities BoardCapabilities       -- ^ Capabilities report
+              | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
   show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
   show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
   show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
   show (Capabilities b)        = "Capabilities " ++ show b
-  show (Unknown bs)            = "Unknown [" ++ intercalate ", " (map showByte bs) ++ "]"
-
+  show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " [" ++ intercalate ", " (map showByte bs) ++ "]"
 
 -- | What the board is capable of and current settings
 type BoardCapabilities = ()
@@ -107,20 +107,20 @@ firmataCmdVal PROTOCOL_VERSION           = 0xF9
 firmataCmdVal SYSTEM_RESET               = 0xFF
 
 -- | Convert a byte to a Firmata command
-getFirmataCmd :: Word8 -> FirmataCmd
+getFirmataCmd :: Word8 -> Either Word8 FirmataCmd
 getFirmataCmd w = classify
   where extract m | w .&. m == m = Just $ fromIntegral (w .&. 0x0F)
                   | True         = Nothing
-        classify | w == 0xF0              = START_SYSEX
-                 | w == 0xF4              = SET_PIN_MODE
-                 | w == 0xF7              = END_SYSEX
-                 | w == 0xF9              = PROTOCOL_VERSION
-                 | w == 0xFF              = SYSTEM_RESET
-                 | Just i <- extract 0xE0 = ANALOG_MESSAGE      i
-                 | Just i <- extract 0x90 = DIGITAL_MESSAGE     i
-                 | Just i <- extract 0xC0 = REPORT_ANALOG_PIN   i
-                 | Just i <- extract 0xD0 = REPORT_DIGITAL_PORT i
-                 | True                   = error $ "hArduino: Received unknown command word: " ++ showByte w
+        classify | w == 0xF0              = Right START_SYSEX
+                 | w == 0xF4              = Right SET_PIN_MODE
+                 | w == 0xF7              = Right END_SYSEX
+                 | w == 0xF9              = Right PROTOCOL_VERSION
+                 | w == 0xFF              = Right SYSTEM_RESET
+                 | Just i <- extract 0xE0 = Right $ ANALOG_MESSAGE      i
+                 | Just i <- extract 0x90 = Right $ DIGITAL_MESSAGE     i
+                 | Just i <- extract 0xC0 = Right $ REPORT_ANALOG_PIN   i
+                 | Just i <- extract 0xD0 = Right $ REPORT_DIGITAL_PORT i
+                 | True                   = Left w
 
 -- | Sys-ex commands, see: http://firmata.org/wiki/Protocol#Sysex_Message_Format
 data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a chip-specific command (AVR, PIC, TI, etc).
@@ -165,23 +165,23 @@ sysExCmdVal SYSEX_NON_REALTIME      = 0x7E
 sysExCmdVal SYSEX_REALTIME          = 0x7F
 
 -- | Convert a byte into a 'SysExCmd'
-getSysExCommand :: Word8 -> SysExCmd
-getSysExCommand 0x00 = RESERVED_COMMAND
-getSysExCommand 0x69 = ANALOG_MAPPING_QUERY
-getSysExCommand 0x6A = ANALOG_MAPPING_RESPONSE
-getSysExCommand 0x6B = CAPABILITY_QUERY
-getSysExCommand 0x6C = CAPABILITY_RESPONSE
-getSysExCommand 0x6D = PIN_STATE_QUERY
-getSysExCommand 0x6E = PIN_STATE_RESPONSE
-getSysExCommand 0x6F = EXTENDED_ANALOG
-getSysExCommand 0x70 = SERVO_CONFIG
-getSysExCommand 0x71 = STRING_DATA
-getSysExCommand 0x75 = SHIFT_DATA
-getSysExCommand 0x76 = I2C_REQUEST
-getSysExCommand 0x77 = I2C_REPLY
-getSysExCommand 0x78 = I2C_CONFIG
-getSysExCommand 0x79 = REPORT_FIRMWARE
-getSysExCommand 0x7A = SAMPLING_INTERVAL
-getSysExCommand 0x7E = SYSEX_NON_REALTIME
-getSysExCommand 0x7F = SYSEX_REALTIME
-getSysExCommand n    = error $ "hArduino: Received unknown sysex command word: " ++ showByte n
+getSysExCommand :: Word8 -> Either Word8 SysExCmd
+getSysExCommand 0x00 = Right RESERVED_COMMAND
+getSysExCommand 0x69 = Right ANALOG_MAPPING_QUERY
+getSysExCommand 0x6A = Right ANALOG_MAPPING_RESPONSE
+getSysExCommand 0x6B = Right CAPABILITY_QUERY
+getSysExCommand 0x6C = Right CAPABILITY_RESPONSE
+getSysExCommand 0x6D = Right PIN_STATE_QUERY
+getSysExCommand 0x6E = Right PIN_STATE_RESPONSE
+getSysExCommand 0x6F = Right EXTENDED_ANALOG
+getSysExCommand 0x70 = Right SERVO_CONFIG
+getSysExCommand 0x71 = Right STRING_DATA
+getSysExCommand 0x75 = Right SHIFT_DATA
+getSysExCommand 0x76 = Right I2C_REQUEST
+getSysExCommand 0x77 = Right I2C_REPLY
+getSysExCommand 0x78 = Right I2C_CONFIG
+getSysExCommand 0x79 = Right REPORT_FIRMWARE
+getSysExCommand 0x7A = Right SAMPLING_INTERVAL
+getSysExCommand 0x7E = Right SYSEX_NON_REALTIME
+getSysExCommand 0x7F = Right SYSEX_REALTIME
+getSysExCommand n    = Left n

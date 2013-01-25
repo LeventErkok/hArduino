@@ -9,14 +9,15 @@
 -- Internal representation of the firmata protocol.
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Protocol(Request(..), Response(..), package) where
+module System.Hardware.Arduino.Protocol(Request(..), Response(..), package, unpackageSysEx, unpackageNonSysEx) where
 
 import Data.Word (Word8)
 
 import qualified Data.ByteString as B
 
 import System.Hardware.Arduino.Data
-import System.Hardware.Arduino.Parts
+import System.Hardware.Arduino.Parts hiding (pin)
+import System.Hardware.Arduino.Utils
 
 -- | Wrap a sys-ex message to be sent to the board
 sysEx :: SysExCmd -> [Word8] -> B.ByteString
@@ -38,3 +39,28 @@ package (SetPinMode p m)         = nonSysEx SET_PIN_MODE            [fromIntegra
 package (DigitalRead p)          = sysEx    PIN_STATE_QUERY         [fromIntegral (pinNo p)]
 package (DigitalReport p b)      = nonSysEx (REPORT_DIGITAL_PORT p) [if b then 1 else 0]
 package (DigitalPortWrite p l m) = nonSysEx (DIGITAL_MESSAGE p)     [l, m]
+
+-- | Unpackage a SysEx response
+unpackageSysEx :: [Word8] -> Response
+unpackageSysEx []              = Unimplemented (Just "<EMPTY-SYSEX-CMD>") []
+unpackageSysEx (cmdWord:args)
+  | Right cmd <- getSysExCommand cmdWord
+  = case (cmd, args) of
+      (REPORT_FIRMWARE, majV : minV : rest) -> Firmware majV minV (getString rest)
+      _                                     -> Unimplemented (Just (show cmd)) args
+  | True
+  = Unimplemented Nothing (cmdWord : args)
+
+-- | Unpackage a Non-SysEx response
+unpackageNonSysEx :: (Int -> IO [Word8]) -> FirmataCmd -> IO Response
+unpackageNonSysEx getBytes c = grab c
+ where unimplemented n = Unimplemented (Just (show c)) `fmap` getBytes n
+       grab (ANALOG_MESSAGE      _pin ) = unimplemented 2
+       grab (DIGITAL_MESSAGE     _port) = unimplemented 2
+       grab (REPORT_ANALOG_PIN   _pin ) = unimplemented 1
+       grab (REPORT_DIGITAL_PORT _port) = unimplemented 1
+       grab START_SYSEX                 = unimplemented 0   -- we should never see this
+       grab SET_PIN_MODE                = unimplemented 2
+       grab END_SYSEX                   = unimplemented 0   -- we should never see this
+       grab PROTOCOL_VERSION            = unimplemented 2
+       grab SYSTEM_RESET                = unimplemented 0
