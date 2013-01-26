@@ -13,7 +13,7 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, modifyMVar_, writeChan, readChan, forkIO)
+import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, writeChan, readChan, forkIO)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
@@ -50,9 +50,17 @@ withArduino verbose fp program =
            let Arduino controller = do initialize
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                bs <- newMVar BoardState{capabilities = M.empty}
+                bs <- newMVar BoardState
                 dc <- newChan
-                res <- tryJust catchCtrlC $ runStateT controller (ArduinoState debugger port "Uninitialized" bs dc)
+                let initState = ArduinoState {
+                                   message       = debugger
+                                 , port          = port
+                                 , firmataID     = "Unknown"
+                                 , capabilities  = BoardCapabilities M.empty
+                                 , boardState    = bs
+                                 , deviceChannel = dc
+                              }
+                res <- tryJust catchCtrlC $ runStateT controller initState
                 case res of
                   Left () -> putStrLn "hArduino: Caught Ctrl-C, quitting.."
                   _       -> return ()
@@ -128,8 +136,7 @@ initialize = do
                      r <- recv
                      case r of
                        Capabilities c -> do liftIO $ dbg "Got capabilities response!"
-                                            bs <- gets boardState
-                                            liftIO $ modifyMVar_ bs (\b -> return (b{capabilities = c}))
+                                            modify (\s -> s{capabilities = c})
                        _              -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
                                             waitCQ
      waitCQ

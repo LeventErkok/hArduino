@@ -83,7 +83,7 @@ instance Show Response where
   show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
   show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
   show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
-  show (Capabilities b)        = "Capabilities " ++ show b
+  show (Capabilities b)        = "Capabilities:\n" ++ show b
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " [" ++ intercalate ", " (map showByte bs) ++ "]"
 
 -- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
@@ -94,18 +94,22 @@ type Resolution = Word8
 type PinCapabilities  = [(PinMode, Resolution)]
 
 -- | What the board is capable of and current settings
-type BoardCapabilities = M.Map Pin PinCapabilities
+newtype BoardCapabilities = BoardCapabilities (M.Map Pin PinCapabilities)
+
+instance Show BoardCapabilities where
+  show (BoardCapabilities m) = intercalate "\n" (map sh (M.toAscList m))
+    where sh (p, pc) = show p ++ ": " ++ unwords [show md | (md, _) <- pc]
 
 -- | State of the board
 data BoardState = BoardState {
-                   capabilities :: BoardCapabilities
                 }
 
 -- | State of the computation
 data ArduinoState = ArduinoState {
                 message       :: String -> IO ()     -- ^ Current debugging routine
               , port          :: SerialPort          -- ^ Serial port we are communicating on
-              , firmataID     :: String    -- ^ The ID of the board (as identified by the Board itself)
+              , firmataID     :: String              -- ^ The ID of the board (as identified by the Board itself)
+              , capabilities  :: BoardCapabilities   -- ^ Capabilities of the board
               , boardState    :: MVar BoardState     -- ^ Current state of the board
               , deviceChannel :: Chan Response       -- ^ Incoming messages from the board
               }
