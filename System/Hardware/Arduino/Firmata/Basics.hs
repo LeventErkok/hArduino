@@ -17,7 +17,6 @@ import Data.Word           (Word8)
 import Data.Bits           (shiftL)
 
 import System.Hardware.Arduino.Data
-import System.Hardware.Arduino.Parts
 import System.Hardware.Arduino.Comm
 import qualified System.Hardware.Arduino.Utils as U
 
@@ -37,6 +36,7 @@ delay :: Int -> Arduino ()
 delay = liftIO . U.delay
 
 -- | Set the mode on a particular pin on the board.
+-- TODO: Based on mode, request the report etc.
 setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p m = send $ SetPinMode p m
 

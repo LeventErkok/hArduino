@@ -23,8 +23,38 @@ import Data.Maybe                 (fromMaybe)
 import Data.Word                  (Word8, Word16)
 import System.Hardware.Serialport (SerialPort)
 
+import qualified Data.Map as M
+
 import System.Hardware.Arduino.Utils
-import System.Hardware.Arduino.Parts hiding (pin)
+
+-- | A pin on the Arduino
+data Pin = Pin { pinNo :: Word8   -- ^ The pin number
+               }
+         deriving (Eq, Ord)
+
+instance Show Pin where
+  show p | i < 10 = "Pin0" ++ show i
+         | True   = "Pin"  ++ show i
+   where i = pinNo p
+
+-- | Smart constructor for a pin
+pin :: Word8 -> Pin
+pin = Pin
+
+-- | On the Arduino, pins are grouped into banks of 8.
+-- Given a pin, this function determines which port/index it belongs to
+pinPort :: Pin -> (Word8, Word8)
+pinPort p = pinNo p `quotRem` 8
+
+-- | The mode for a pin.
+data PinMode = INPUT
+             | OUTPUT
+             | ANALOG
+             | PWM
+             | SERVO
+             | SHIFT
+             | I2C
+             deriving (Eq, Show, Enum)
 
 -- | A request, as sent to Arduino
 data Request = QueryFirmware                      -- ^ Query the Firmata version installed
@@ -56,8 +86,15 @@ instance Show Response where
   show (Capabilities b)        = "Capabilities " ++ show b
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " [" ++ intercalate ", " (map showByte bs) ++ "]"
 
+-- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
+-- TODO: Not quite sure how this is used, so merely keep it as a Word8 now
+type Resolution = Word8
+
+-- | Capabilities of a pin
+type PinCapabilities  = [(PinMode, Resolution)]
+
 -- | What the board is capable of and current settings
-type BoardCapabilities = ()
+type BoardCapabilities = M.Map Pin PinCapabilities
 
 -- | State of the board
 data BoardState = BoardState {
@@ -96,15 +133,15 @@ data FirmataCmd = ANALOG_MESSAGE      Word8 -- ^ @0xE0@ pin
 
 -- | Compute the numeric value of a command
 firmataCmdVal :: FirmataCmd -> Word8
-firmataCmdVal (ANALOG_MESSAGE      pin ) = 0xE0 .|. pin
-firmataCmdVal (DIGITAL_MESSAGE     port) = 0x90 .|. port
-firmataCmdVal (REPORT_ANALOG_PIN   pin ) = 0xC0 .|. pin
-firmataCmdVal (REPORT_DIGITAL_PORT port) = 0xD0 .|. port
-firmataCmdVal START_SYSEX                = 0xF0
-firmataCmdVal SET_PIN_MODE               = 0xF4
-firmataCmdVal END_SYSEX                  = 0xF7
-firmataCmdVal PROTOCOL_VERSION           = 0xF9
-firmataCmdVal SYSTEM_RESET               = 0xFF
+firmataCmdVal (ANALOG_MESSAGE      pinNo ) = 0xE0 .|. pinNo
+firmataCmdVal (DIGITAL_MESSAGE     portNo) = 0x90 .|. portNo
+firmataCmdVal (REPORT_ANALOG_PIN   pinNo ) = 0xC0 .|. pinNo
+firmataCmdVal (REPORT_DIGITAL_PORT portNo) = 0xD0 .|. portNo
+firmataCmdVal START_SYSEX                  = 0xF0
+firmataCmdVal SET_PIN_MODE                 = 0xF4
+firmataCmdVal END_SYSEX                    = 0xF7
+firmataCmdVal PROTOCOL_VERSION             = 0xF9
+firmataCmdVal SYSTEM_RESET                 = 0xFF
 
 -- | Convert a byte to a Firmata command
 getFirmataCmd :: Word8 -> Either Word8 FirmataCmd

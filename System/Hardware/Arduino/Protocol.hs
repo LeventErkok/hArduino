@@ -9,14 +9,14 @@
 -- Internal representation of the firmata protocol.
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Protocol(Request(..), Response(..), package, unpackageSysEx, unpackageNonSysEx) where
+module System.Hardware.Arduino.Protocol(package, unpackageSysEx, unpackageNonSysEx) where
 
 import Data.Word (Word8)
 
 import qualified Data.ByteString as B
+import qualified Data.Map        as M
 
 import System.Hardware.Arduino.Data
-import System.Hardware.Arduino.Parts hiding (pin)
 import System.Hardware.Arduino.Utils
 
 -- | Wrap a sys-ex message to be sent to the board
@@ -47,9 +47,19 @@ unpackageSysEx (cmdWord:args)
   | Right cmd <- getSysExCommand cmdWord
   = case (cmd, args) of
       (REPORT_FIRMWARE, majV : minV : rest) -> Firmware majV minV (getString rest)
+      (CAPABILITY_RESPONSE, bs)             -> Capabilities (getCapabilities bs)
       _                                     -> Unimplemented (Just (show cmd)) args
   | True
   = Unimplemented Nothing (cmdWord : args)
+
+getCapabilities :: [Word8] -> BoardCapabilities
+getCapabilities bs = M.fromList $ zip (map pin [0..]) (map pinCaps (chunk bs))
+  where chunk xs = case break (== 0x7f) xs of
+                     ([], [])         -> []
+                     (cur, 0x7f:rest) -> cur : chunk rest
+                     _                -> [xs]
+        pinCaps (x:y:rest) = (toEnum (fromIntegral x), y) : pinCaps rest
+        pinCaps _          = []
 
 -- | Unpackage a Non-SysEx response
 unpackageNonSysEx :: (Int -> IO [Word8]) -> FirmataCmd -> IO Response

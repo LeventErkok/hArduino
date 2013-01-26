@@ -13,12 +13,13 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (myThreadId, throwTo, newChan, newEmptyMVar, modifyMVar_, writeChan, readChan, forkIO)
+import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, modifyMVar_, writeChan, readChan, forkIO)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
 import qualified Data.ByteString            as B (unpack, length)
+import qualified Data.Map                   as M (empty)
 import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
 
 import System.Hardware.Arduino.Data
@@ -49,7 +50,7 @@ withArduino verbose fp program =
            let Arduino controller = do initialize
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                bs <- newEmptyMVar
+                bs <- newMVar BoardState{capabilities = M.empty}
                 dc <- newChan
                 res <- tryJust catchCtrlC $ runStateT controller (ArduinoState debugger port "Uninitialized" bs dc)
                 case res of
@@ -127,8 +128,8 @@ initialize = do
                      r <- recv
                      case r of
                        Capabilities c -> do liftIO $ dbg "Got capabilities response!"
-                                            s <- gets boardState
-                                            liftIO $ modifyMVar_ s (\b -> return (b{capabilities = c}))
+                                            bs <- gets boardState
+                                            liftIO $ modifyMVar_ bs (\b -> return (b{capabilities = c}))
                        _              -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
                                             waitCQ
      waitCQ
