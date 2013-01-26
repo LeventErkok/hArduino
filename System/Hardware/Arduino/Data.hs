@@ -57,16 +57,19 @@ data PinMode = INPUT
              deriving (Eq, Show, Enum)
 
 -- | A request, as sent to Arduino
-data Request = QueryFirmware                      -- ^ Query the Firmata version installed
-             | CapabilityQuery                    -- ^ Query the capabilities of the board
-             | SetPinMode       Pin PinMode       -- ^ Set a pin to a particular mode
-             | DigitalRead      Pin               -- ^ Read the value of a given pin
-             | DigitalReport    Word8 Bool        -- ^ Digital Report values on port enable/disable
-             | DigitalPortWrite Word8 Word8 Word8 -- ^ Write the values of pins on the given port; 2 bytes lo/hi
+data Request = QueryFirmware                        -- ^ Query the Firmata version installed
+             | CapabilityQuery                      -- ^ Query the capabilities of the board
+             | AnalogMappingQuery                   -- ^ Query the mapping of analog pins
+             -- Whatever follows need to be reimplemented
+             | SetPinMode         Pin PinMode       -- ^ Set a pin to a particular mode
+             | DigitalRead        Pin               -- ^ Read the value of a given pin
+             | DigitalReport      Word8 Bool        -- ^ Digital Report values on port enable/disable
+             | DigitalPortWrite   Word8 Word8 Word8 -- ^ Write the values of pins on the given port; 2 bytes lo/hi
 
 instance Show Request where
    show QueryFirmware            = "QueryFirmWare"
    show CapabilityQuery          = "CapabilityQuery"
+   show AnalogMappingQuery       = "AnalogMappingQuery"
    show (SetPinMode p m)         = "SetPinMode "   ++ show p ++ " to " ++ show m
    show (DigitalRead p)          = "DigitalRead "  ++ show p
    show (DigitalReport p b)      = "DigitalReport "  ++ show p ++ (if b then " enabled" else " disabled")
@@ -74,31 +77,36 @@ instance Show Request where
 
 -- | A response, as returned from the Arduino
 data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/min and indentifier
+              | Capabilities BoardCapabilities       -- ^ Capabilities report
+              | AnalogMapping [Word8]                -- ^ Analog pin mappings
               | DigitalPinState Pin PinMode Bool     -- ^ State of a given pin
               | DigitalPortState Int Word16          -- ^ State of a given port
-              | Capabilities BoardCapabilities       -- ^ Capabilities report
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
   show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
+  show (Capabilities b)        = "Capabilities:\n" ++ show b
+  show (AnalogMapping bs)      = "AnalogMapping: " ++ showByteList bs
   show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
   show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
-  show (Capabilities b)        = "Capabilities:\n" ++ show b
-  show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " [" ++ intercalate ", " (map showByte bs) ++ "]"
+  show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " " ++ showByteList bs
 
 -- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
 -- TODO: Not quite sure how this is used, so merely keep it as a Word8 now
 type Resolution = Word8
 
 -- | Capabilities of a pin
-type PinCapabilities  = [(PinMode, Resolution)]
+type PinCapabilities  = ( Maybe Word8               -- Analog pin number, if any
+                        , [(PinMode, Resolution)]
+                        )
 
 -- | What the board is capable of and current settings
 newtype BoardCapabilities = BoardCapabilities (M.Map Pin PinCapabilities)
 
 instance Show BoardCapabilities where
   show (BoardCapabilities m) = intercalate "\n" (map sh (M.toAscList m))
-    where sh (p, pc) = show p ++ ": " ++ unwords [show md | (md, _) <- pc]
+    where sh (p, (mbA, pc)) = show p ++ sep ++ unwords [show md | (md, _) <- pc]
+             where sep = maybe ": " (\i -> "[A" ++ show i ++ "]: ") mbA
 
 -- | State of the board
 data BoardState = BoardState {

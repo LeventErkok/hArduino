@@ -19,7 +19,7 @@ import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
 import qualified Data.ByteString            as B (unpack, length)
-import qualified Data.Map                   as M (empty)
+import qualified Data.Map                   as M (empty, mapWithKey)
 import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
 
 import System.Hardware.Arduino.Data
@@ -114,29 +114,42 @@ setupListener = do
         tid <- liftIO $ forkIO $ forever listener
         debug $ "Started listener thread: " ++ show tid
 
--- | Initialize our board, get capabilities, set up comms
+-- | Initialize our board, get capabilities, etc
 initialize :: Arduino ()
 initialize = do
-     dbg <- gets message
      -- Step 1: Set up the listener thread
      setupListener
      -- Step 2: Send query-firmware, and wait until we get a response
-     send QueryFirmware
-     let waitFW = do liftIO $ dbg "Waiting for Firmware response."
-                     r <- recv
-                     case r of
-                       Firmware v1 v2 m -> do liftIO $ dbg $ "Got Firmware response: " ++ show r
-                                              modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"})
-                       _                -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
-                                              waitFW
-     waitFW
+     handshake QueryFirmware
+               (\r -> case r of {Firmware{} -> True; _ -> False})
+               (\(Firmware v1 v2 m) -> modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"}))
      -- Step 3: Send a capabilities request
-     send CapabilityQuery
-     let waitCQ = do liftIO $ dbg "Waiting for capabilities request."
-                     r <- recv
-                     case r of
-                       Capabilities c -> do liftIO $ dbg "Got capabilities response!"
-                                            modify (\s -> s{capabilities = c})
-                       _              -> do liftIO $ dbg $ "Skipping unexpected response: " ++ show r
-                                            waitCQ
-     waitCQ
+     handshake CapabilityQuery
+               (\r -> case r of {Capabilities{} -> True; _ -> False})
+               (\(Capabilities c) -> modify (\s -> s{capabilities = c}))
+     -- Step 4: Send analog-mapping query
+     handshake AnalogMappingQuery
+               (\r -> case r of {AnalogMapping{} -> True; _ -> False})
+               (\(AnalogMapping bs) -> do BoardCapabilities m <- gets capabilities
+                                          modify (\s -> s{capabilities = BoardCapabilities (M.mapWithKey (mapAnalog bs) m)}))
+     -- We're done, print capabilities in debug mode
+     cs <- gets capabilities
+     dbg <- gets message
+     liftIO $ dbg $ "Handshake complete. Board capabilities:\n" ++ show cs
+ where handshake msg isOK process = do
+           dbg <- gets message
+           send msg
+           let wait = do resp <- recv
+                         if isOK resp
+                            then process resp
+                            else do liftIO $ dbg $ "Skpping unexpected response: " ++ show resp
+                                    wait
+           wait
+       mapAnalog bs p c
+          | i < rl && m /= 0x7f
+          = (Just m, snd c)
+          | True             -- out-of-bounds, or not analog; ignore
+          = c
+         where rl = length bs
+               i  = fromIntegral (pinNo p)
+               m  = bs !! i

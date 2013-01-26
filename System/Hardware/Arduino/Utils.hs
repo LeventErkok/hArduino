@@ -15,6 +15,7 @@ import Control.Monad      (void)
 import Data.Bits          ((.|.), shiftL)
 import Data.Char          (isAlphaNum, isAscii, isSpace, chr)
 import Data.IORef         (newIORef, readIORef, writeIORef)
+import Data.List          (intercalate)
 import Data.Word          (Word8)
 import System.Process     (system)
 import System.Info        (os)
@@ -47,6 +48,10 @@ showByte i | isVisible = [c]
            | True      = showHex i ""
   where c = chr $ fromIntegral i
         isVisible = isAscii c && isAlphaNum c && isSpace c
+
+-- | Show a list of bytes
+showByteList :: [Word8] -> String
+showByteList bs =  "[" ++ intercalate ", " (map showByte bs) ++ "]"
 
 -- | Show a number as a binary value
 showBin :: (Integral a, Show a) => a -> String

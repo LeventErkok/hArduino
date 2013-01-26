@@ -35,6 +35,7 @@ nonSysEx cmd bs = B.pack $ firmataCmdVal cmd : bs
 package :: Request -> B.ByteString
 package QueryFirmware            = sysEx    REPORT_FIRMWARE         []
 package CapabilityQuery          = sysEx    CAPABILITY_QUERY        []
+package AnalogMappingQuery       = sysEx    ANALOG_MAPPING_QUERY    []
 package (SetPinMode p m)         = nonSysEx SET_PIN_MODE            [fromIntegral (pinNo p), fromIntegral (fromEnum m)]
 package (DigitalRead p)          = sysEx    PIN_STATE_QUERY         [fromIntegral (pinNo p)]
 package (DigitalReport p b)      = nonSysEx (REPORT_DIGITAL_PORT p) [if b then 1 else 0]
@@ -48,12 +49,13 @@ unpackageSysEx (cmdWord:args)
   = case (cmd, args) of
       (REPORT_FIRMWARE, majV : minV : rest) -> Firmware majV minV (getString rest)
       (CAPABILITY_RESPONSE, bs)             -> Capabilities (getCapabilities bs)
+      (ANALOG_MAPPING_RESPONSE, bs)         -> AnalogMapping bs
       _                                     -> Unimplemented (Just (show cmd)) args
   | True
   = Unimplemented Nothing (cmdWord : args)
 
 getCapabilities :: [Word8] -> BoardCapabilities
-getCapabilities bs = BoardCapabilities $ M.fromList $ zip (map pin [0..]) (map pinCaps (chunk bs))
+getCapabilities bs = BoardCapabilities $ M.fromList $ zipWith (\p c -> (p, (Nothing, c))) (map pin [0..]) (map pinCaps (chunk bs))
   where chunk xs = case break (== 0x7f) xs of
                      ([], [])         -> []
                      (cur, 0x7f:rest) -> cur : chunk rest
