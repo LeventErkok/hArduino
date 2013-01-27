@@ -30,7 +30,7 @@ blink = withArduino True "/dev/cu.usbmodemfd131" $ do
            let led = pin 13
            setPinMode led OUTPUT
            forever $ do liftIO $ putStr "."
-                        digitalWrite led True
+                        -- digitalWrite led True
                         delay 1000
-                        digitalWrite led False
+                        -- digitalWrite led False
                         delay 1000

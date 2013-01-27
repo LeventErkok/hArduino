@@ -12,9 +12,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Firmata.Basics where
 
+import Control.Monad       (when)
 import Control.Monad.Trans (liftIO)
 import Data.Word           (Word8)
-import Data.Bits           (shiftL)
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Comm
@@ -36,11 +36,19 @@ delay :: Int -> Arduino ()
 delay = liftIO . U.delay
 
 -- | Set the mode on a particular pin on the board.
--- TODO: Based on mode, request the report etc.
 setPinMode :: Pin -> PinMode -> Arduino ()
-setPinMode p m = send $ SetPinMode p m
+setPinMode p m = do
+   ms <- getPinModes p
+   when (m `notElem` ms) $ U.die ("setPinMode: mode " ++ show m ++ " for " ++ show p ++ " is invalid")
+                                 ["Supported modes for this pin are: " ++ unwords (if null ms then ["NONE"] else map show ms)]
+   send $ SetPinMode p m
+   extras <- getModeActions p m
+   mapM_ send extras
 
+{-
 -- | Read the value of a pin in digital mode.
+-- This should just return the last cached value if any
+-- Otherwise prod it
 digitalRead :: Pin -> Arduino Bool
 digitalRead p = do
         let (port, _) = pinPort p
@@ -65,3 +73,5 @@ digitalWrite p v = do
             lsb = sum [1 `shiftL` i | (True, i) <- zip [b0, b1, b2, b3, b4, b5, b6, False] [0 .. 7]]
             msb = if b7 then 1 else 0
         send $ DigitalPortWrite port lsb msb
+
+-}

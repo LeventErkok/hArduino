@@ -63,3 +63,7 @@ getString []         = ""
 getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen, but no need to error out either
 getString (l:h:rest) = c : getString rest
   where c = chr $ fromIntegral $ h `shiftL` 8 .|. l
+
+-- | Error out
+die :: String -> [String] -> a
+die m ms = error $ "\n*** hArduino:ERROR: " ++ intercalate "\n*** " (m:ms)

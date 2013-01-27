@@ -20,6 +20,7 @@ import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
 import qualified Data.ByteString            as B (unpack, length)
 import qualified Data.Map                   as M (empty, mapWithKey)
+import qualified Data.Set                   as S (empty)
 import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
 
 import System.Hardware.Arduino.Data
@@ -50,7 +51,11 @@ withArduino verbose fp program =
            let Arduino controller = do initialize
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
-                bs <- newMVar BoardState
+                let initBoardState = BoardState {
+                                         analogReportingPins = S.empty
+                                       , digitalReportingPins = S.empty
+                                     }
+                bs <- newMVar initBoardState
                 dc <- newChan
                 let initState = ArduinoState {
                                    message       = debugger
