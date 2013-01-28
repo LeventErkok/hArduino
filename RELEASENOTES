@@ -4,7 +4,7 @@ GitHub:  http://leventerkok.github.com/hArduino
 Latest Hackage released version: 0.2
 
 ======================================================================
-Version 0.2, 2013-01-27
+Version 0.2, 2013-01-28
 
  - Rewrite the communication engine
  - Digital input/output implementation
