@@ -27,7 +27,7 @@ module System.Hardware.Arduino (
   -- ** Controlling the pins
   , setPinMode
   -- ** Reading and Writing digital values
-  -- , digitalRead, digitalWrite
+  , digitalRead, digitalWrite
   -- ** Misc utilities
   , delay
   -- * Hardware components on the board

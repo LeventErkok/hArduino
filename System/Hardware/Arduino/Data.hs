@@ -15,9 +15,9 @@
 module System.Hardware.Arduino.Data where
 
 import Control.Applicative        (Applicative)
-import Control.Concurrent         (Chan, MVar, modifyMVar)
+import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, readMVar)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
-import Data.Bits                  ((.&.), (.|.))
+import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
 import Data.Maybe                 (fromMaybe)
 import Data.Word                  (Word8, Word16)
@@ -34,7 +34,7 @@ data Port = Port { portNo :: Word8  -- ^ The port number
                  deriving (Eq, Ord)
 
 instance Show Port where
-  show p = "Port" ++ show p
+  show p = "Port" ++ show (portNo p)
 
 -- | A pin on the Arduino
 data Pin = Pin { pinNo :: Word8   -- ^ The pin number
@@ -77,6 +77,7 @@ data Request = QueryFirmware                        -- ^ Query the Firmata versi
              | SetPinMode         Pin  PinMode      -- ^ Set the mode on a pin
              | DigitalReport      Port Bool         -- ^ Digital report values on port enable/disable
              | AnalogReport       Pin  Bool         -- ^ Analog report values on pin enable/disable
+             | DigitalPortWrite   Port Word8 Word8  -- ^ Set the values on a port digitally
              deriving Show
 
 -- | A response, as returned from the Arduino
@@ -112,10 +113,17 @@ instance Show BoardCapabilities where
     where sh (p, (mbA, pc)) = show p ++ sep ++ unwords [show md | (md, _) <- pc]
              where sep = maybe ": " (\i -> "[A" ++ show i ++ "]: ") mbA
 
+-- | Data associated with a pin
+data PinData = PinData {
+                 pinMode  :: PinMode
+               , pinValue :: Maybe (Either Bool Int)
+               }
+
 -- | State of the board
 data BoardState = BoardState {
-                    analogReportingPins  :: S.Set Pin   -- ^ Which analog pins are reporting
-                  , digitalReportingPins :: S.Set Pin   -- ^ Which digital pins are reporting
+                    analogReportingPins  :: S.Set Pin           -- ^ Which analog pins are reporting
+                  , digitalReportingPins :: S.Set Pin           -- ^ Which digital pins are reporting
+                  , pinStates            :: M.Map Pin PinData   -- ^ For-each pin, store its data
                   }
 
 -- | State of the computation
@@ -137,12 +145,52 @@ debug :: String -> Arduino ()
 debug s = do f <- gets message
              liftIO $ f s
 
+-- | Which modes does this pin support?
 getPinModes :: Pin -> Arduino [PinMode]
 getPinModes p = do
   BoardCapabilities caps <- gets capabilities
   case p `M.lookup` caps of
     Nothing      -> return []
     Just (_, ps) -> return (map fst ps)
+
+-- | Current state of the pin
+getPinData :: Pin -> Arduino PinData
+getPinData p = do
+  bs  <- gets boardState
+  bst <- liftIO $ readMVar bs
+  case p `M.lookup` pinStates bst of
+    Nothing -> die ("Trying to access " ++ show p ++ " without proper configuration.")
+                   ["Make sure that you use 'setPinMode' to configure this pin first."]
+    Just pd -> return pd
+
+-- | Given a pin, collect the digital value corresponding to the
+-- port it belongs to, where the new value of the current pin is given
+-- The result is two bytes:
+--
+--   * First  lsb: pins 0-6 on the port
+--   * Second msb: pins 7-13 on the port
+--
+-- In particular, the result is suitable to be sent with a digital message
+computePortData :: Pin -> Bool -> Arduino (Word8, Word8)
+computePortData curPin newValue = do
+  let curPort  = pinPort curPin
+  let curIndex = pinPortIndex curPin
+  bs <- gets boardState
+  liftIO $ modifyMVar bs $ \bst -> do
+     let values = [(pinPortIndex p, pinValue pd) | (p, pd) <- M.assocs (pinStates bst), curPort == pinPort p, pinMode pd `elem` [INPUT, OUTPUT]]
+         getVal i
+           | i == curIndex                             = newValue
+           | Just (Just (Left v)) <- i `lookup` values = v
+           | True                                      = False
+         [b0, b1, b2, b3, b4, b5, b6, b7] = map getVal [0 .. 7]
+         lsb = foldr (\(i, b) m -> if b then m `setBit` i     else m) 0 (zip [0..] [b0, b1, b2, b3, b4, b5, b6])
+         msb = foldr (\(i, b) m -> if b then m `setBit` (i-7) else m) 0 (zip [7..] [b7])
+     -- update internal-value of the pin
+     let bst' = bst {pinStates = M.insertWith (\_ o -> o{pinValue = Just (Left newValue)})
+                                              curPin
+                                              PinData{pinMode = OUTPUT, pinValue = Just (Left newValue)}
+                                              (pinStates bst)}
+     return (bst', (lsb, msb))
 
 -- | Firmata commands, see: http://firmata.org/wiki/Protocol#Message_Types
 data FirmataCmd = ANALOG_MESSAGE      Pin  -- ^ @0xE0@ pin
@@ -247,6 +295,26 @@ getSysExCommand 0x7A = Right SAMPLING_INTERVAL
 getSysExCommand 0x7E = Right SYSEX_NON_REALTIME
 getSysExCommand 0x7F = Right SYSEX_REALTIME
 getSysExCommand n    = Left n
+
+-- | Keep track of pin-mode changes
+registerPinMode :: Pin -> PinMode -> Arduino [Request]
+registerPinMode p m = do
+        -- first check that the requested mode is supported for this pin
+        BoardCapabilities caps <- gets capabilities
+        case p `M.lookup` caps of
+          Nothing
+             -> die ("Invalid access to unsupported pin: " ++ show p)
+                    ("Available pins are: " : ["  " ++ show k | (k, _) <- M.toAscList caps])
+          Just (_, ms)
+            | m `notElem` map fst ms
+            -> die ("Invalid mode " ++ show m ++ " set for " ++ show p)
+                   ["Supported modes for this pin are: " ++ unwords (if null ms then ["NONE"] else map show ms)]
+          _ -> return ()
+        -- register the pin mode
+        bs <- gets boardState
+        liftIO $ modifyMVar_ bs $ \bst -> return bst{pinStates = M.insert p PinData{pinMode = m, pinValue = Nothing} (pinStates bst) }
+        -- now return extra actions we need to take for this mode
+        getModeActions p m
 
 -- | Depending on a mode-set call, determine what further
 -- actions should be executed, such as enabling/disabling pin/port reporting

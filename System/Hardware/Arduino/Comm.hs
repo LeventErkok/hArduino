@@ -52,8 +52,9 @@ withArduino verbose fp program =
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
                 let initBoardState = BoardState {
-                                         analogReportingPins = S.empty
+                                         analogReportingPins  = S.empty
                                        , digitalReportingPins = S.empty
+                                       , pinStates            = M.empty
                                      }
                 bs <- newMVar initBoardState
                 dc <- newChan

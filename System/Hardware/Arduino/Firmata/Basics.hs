@@ -38,13 +38,25 @@ delay = liftIO . U.delay
 -- | Set the mode on a particular pin on the board.
 setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p m = do
-   ms <- getPinModes p
-   when (m `notElem` ms) $ U.die ("setPinMode: mode " ++ show m ++ " for " ++ show p ++ " is invalid")
-                                 ["Supported modes for this pin are: " ++ unwords (if null ms then ["NONE"] else map show ms)]
+   extras <- registerPinMode p m
    send $ SetPinMode p m
-   extras <- getModeActions p m
    mapM_ send extras
 
+-- | Set or clear a digital pin on the board
+digitalWrite :: Pin -> Bool -> Arduino ()
+digitalWrite p v = do
+   -- first make sure we have this pin set as output
+   pd <- getPinData p
+   when (pinMode pd /= OUTPUT) $ U.die ("Invalid digital-write call on pin " ++ show p)
+                                       [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                       , "For digitalWrite, it must be set to: " ++ show OUTPUT
+                                       , "via a proper call to setPinMode"
+                                       ]
+   (lsb, msb) <- computePortData p v
+   send $ DigitalPortWrite (pinPort p) lsb msb
+
+digitalRead :: Pin -> Arduino Bool
+digitalRead = error "digitalRead: TBD"
 {-
 -- | Read the value of a pin in digital mode.
 -- This should just return the last cached value if any
@@ -60,18 +72,4 @@ digitalRead p = do
                                     then return b
                                     else error $ "digitalRead: Got unexpected response for " ++ show p' ++ " instead of " ++ show p'
           _                     -> error $ "digitalRead: Got unexpected response for query DigitalReport: " ++ show r
-
--- | Set or clear a particular digital pin on the board.
-digitalWrite :: Pin -> Bool -> Arduino ()
-digitalWrite p v = do
-        let (port, idx) = pinPort p
-            dr n
-             | n > 2 && n < 14 = digitalRead (pin n)
-             | True            = return False
-        oldVal <- mapM dr [port * 8 + i | i <- [0 .. 7]]
-        let [b0, b1, b2, b3, b4, b5, b6, b7] = [if i == idx then v else old | (old, i) <- zip oldVal [0 ..]]
-            lsb = sum [1 `shiftL` i | (True, i) <- zip [b0, b1, b2, b3, b4, b5, b6, False] [0 .. 7]]
-            msb = if b7 then 1 else 0
-        send $ DigitalPortWrite port lsb msb
-
 -}
