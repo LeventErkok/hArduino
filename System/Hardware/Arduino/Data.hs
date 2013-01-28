@@ -20,7 +20,7 @@ import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
 import Data.Maybe                 (fromMaybe)
-import Data.Word                  (Word8, Word16)
+import Data.Word                  (Word8)
 import System.Hardware.Serialport (SerialPort)
 
 import qualified Data.Map as M
@@ -46,7 +46,7 @@ instance Show Pin where
          | True   = "Pin"  ++ show i
    where i = pinNo p
 
--- | Smart constructor for a pin
+-- | Declare a pin on the board by its number.
 pin :: Word8 -> Pin
 pin = Pin
 
@@ -61,13 +61,13 @@ pinPortIndex :: Pin -> Word8
 pinPortIndex p = pinNo p `rem` 8
 
 -- | The mode for a pin.
-data PinMode = INPUT
-             | OUTPUT
-             | ANALOG
-             | PWM
-             | SERVO
-             | SHIFT
-             | I2C
+data PinMode = INPUT    -- ^ Digital input
+             | OUTPUT   -- ^ Digital output
+             | ANALOG   -- ^ Analog input
+             | PWM      -- ^ PWM (Pulse-Width-Modulation) output 
+             | SERVO    -- ^ Servo Motor controller
+             | SHIFT    -- ^ Shift controller
+             | I2C      -- ^ I2C (Inter-Integrated-Circuit) connection
              deriving (Eq, Show, Enum)
 
 -- | A request, as sent to Arduino
@@ -84,8 +84,6 @@ data Request = QueryFirmware                        -- ^ Query the Firmata versi
 data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/min and indentifier
               | Capabilities BoardCapabilities       -- ^ Capabilities report
               | AnalogMapping [Word8]                -- ^ Analog pin mappings
-              | DigitalPinState Pin PinMode Bool     -- ^ State of a given pin
-              | DigitalPortState Int Word16          -- ^ State of a given port
               | DigitalMessage Port Word8 Word8      -- ^ Status of a port
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
@@ -93,8 +91,6 @@ instance Show Response where
   show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
   show (Capabilities b)        = "Capabilities:\n" ++ show b
   show (AnalogMapping bs)      = "AnalogMapping: " ++ showByteList bs
-  show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
-  show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
   show (DigitalMessage p l h)  = "DigitalMessage " ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " " ++ showByteList bs
 
