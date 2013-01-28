@@ -86,6 +86,7 @@ data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/
               | AnalogMapping [Word8]                -- ^ Analog pin mappings
               | DigitalPinState Pin PinMode Bool     -- ^ State of a given pin
               | DigitalPortState Int Word16          -- ^ State of a given port
+              | DigitalMessage Port Word8 Word8      -- ^ Status of a port
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
@@ -94,6 +95,7 @@ instance Show Response where
   show (AnalogMapping bs)      = "AnalogMapping: " ++ showByteList bs
   show (DigitalPinState p m v) = "DigitalPinState " ++ show p ++ "(" ++ show m ++ ") = " ++ if v then "HIGH" else "LOW"
   show (DigitalPortState p w)  = "DigitalPortState " ++ show p ++ " = " ++ show w
+  show (DigitalMessage p l h)  = "DigitalMessage " ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " " ++ showByteList bs
 
 -- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
@@ -118,6 +120,7 @@ data PinData = PinData {
                  pinMode  :: PinMode
                , pinValue :: Maybe (Either Bool Int)
                }
+               deriving Show
 
 -- | State of the board
 data BoardState = BoardState {

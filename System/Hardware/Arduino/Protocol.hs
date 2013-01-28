@@ -70,9 +70,9 @@ getCapabilities bs = BoardCapabilities $ M.fromList $ zipWith (\p c -> (p, (Noth
 unpackageNonSysEx :: (Int -> IO [Word8]) -> FirmataCmd -> IO Response
 unpackageNonSysEx getBytes c = grab c
  where unimplemented n = Unimplemented (Just (show c)) `fmap` getBytes n
-       grab (ANALOG_MESSAGE      _pin ) = unimplemented 2
-       grab (DIGITAL_MESSAGE     _port) = unimplemented 2
-       grab (REPORT_ANALOG_PIN   _pin ) = unimplemented 1
+       grab (ANALOG_MESSAGE      _pin)  = unimplemented 2
+       grab (DIGITAL_MESSAGE      p)    = getBytes 2 >>= \[l, h] -> return (DigitalMessage p l h)
+       grab (REPORT_ANALOG_PIN   _pin)  = unimplemented 1
        grab (REPORT_DIGITAL_PORT _port) = unimplemented 1
        grab START_SYSEX                 = unimplemented 0   -- we should never see this
        grab SET_PIN_MODE                = unimplemented 2

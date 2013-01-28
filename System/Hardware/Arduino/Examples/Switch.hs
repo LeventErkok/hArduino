@@ -20,35 +20,32 @@ import System.Hardware.Arduino
 -- | Read the value of a push-button switch (NO - normally open)
 -- connected to input pin 2 on the Arduino. We will continuously
 -- monitor and print the value as it changes. Also, we'll turn
--- the led on pin 13 on when the switch is pressed.
+-- the led on pin 7 on when the switch is pressed.
 --
 -- The wiring diagram is fairly straightforward:
 --
---     ~10K pull-down resistor, between pin 2 and GND
---     Push-button switch between pin-2 and 5V
+--     Switch: ~10K pull-down resistor, between pin 2 and GND
+--             Push-button NO-switch (normally open) between pin-2 and 5V
 --
--- Don't neglect the pull-down resistor to make sure you don't
--- do a short-circuit between GND and 5V!
+--     Led   : ~10K pull-down resistor between pin-7 and led+
+--             Led between GND and the resistor
+--
+-- Don't neglect the resistors to make sure you don't do a short-circuit!
 switch :: IO ()
-switch = withArduino True "/dev/cu.usbmodemfd131" $ do
+switch = withArduino False "/dev/cu.usbmodemfd131" $ do
             liftIO $ hSetBuffering stdout NoBuffering
-            -- setPinMode led OUTPUT
+            setPinMode led OUTPUT
             setPinMode button INPUT
-            -- current <- digitalRead button
-            let current = True
+            current <- digitalRead button
             report (not current) current
             go current
  where button = pin 2
-       -- led    = pin 13
-       -- We're using a NO (normally open) button with a pull-down resistor,
-       -- so if new is True then the button is pressed
+       led    = pin 7
        report prev new
-         | prev == new = return ()  -- No state change, nothing to report
-         | new         = liftIO $ putStrLn "Button is currently ON"
-         | True        = liftIO $ putStrLn "Button is currently OFF"
-       go prev = forever $ do let new = False
-                              -- new <- digitalRead button
-                              -- digitalWrite led new
+         | prev /= new = do liftIO $ putStrLn $ "Button is currently " ++ if new then "ON" else "OFF"
+                            digitalWrite led new
+         | True        = return ()
+       go prev = forever $ do new <- digitalRead button
                               report prev new
                               delay 1000
                               go new

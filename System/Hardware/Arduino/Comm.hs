@@ -13,9 +13,10 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, writeChan, readChan, forkIO)
+import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, writeChan, readChan, forkIO, modifyMVar_)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
+import Data.Bits            (testBit)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
 import qualified Data.ByteString            as B (unpack, length)
@@ -108,16 +109,28 @@ setupListener = do
                                     if b == firmataCmdVal END_SYSEX
                                        then return $ reverse sofar
                                        else collectSysEx (b : sofar)
-            listener = do [cmd] <- getBytes 1
-                          resp  <- case getFirmataCmd cmd of
-                                     Left  unknown     -> return $ Unimplemented (Just (show unknown)) []
-                                     Right START_SYSEX -> unpackageSysEx `fmap` collectSysEx []
-                                     Right nonSysEx    -> unpackageNonSysEx getBytes nonSysEx
-                          case resp of
-                            Unimplemented{} -> dbg $ "Ignoring the received response: " ++ show resp
-                            _               -> do dbg $ "Received " ++ show resp
-                                                  writeChan chan resp
-        tid <- liftIO $ forkIO $ forever listener
+            listener bs = do
+                [cmd] <- getBytes 1
+                resp  <- case getFirmataCmd cmd of
+                           Left  unknown     -> return $ Unimplemented (Just (show unknown)) []
+                           Right START_SYSEX -> unpackageSysEx `fmap` collectSysEx []
+                           Right nonSysEx    -> unpackageNonSysEx getBytes nonSysEx
+                case resp of
+                  Unimplemented{}      -> dbg $ "Ignoring the received response: " ++ show resp
+                  DigitalMessage p l h -> do dbg $ "Updating port " ++ show p ++ " values with " ++ showByteList [l,h]
+                                             modifyMVar_ bs $ \bst -> do
+                                                  let upd o od | p /= pinPort o               = od   -- different port, no change
+                                                               | pinMode od `notElem` [INPUT] = od   -- not an input pin, ignore
+                                                               | True                         = od{pinValue = Just (Left newVal)}
+                                                        where idx = pinPortIndex o
+                                                              newVal | idx <= 6 = l `testBit` fromIntegral idx
+                                                                     | True     = h `testBit` fromIntegral (idx - 7)
+                                                  let bst' = bst{pinStates = M.mapWithKey upd (pinStates bst)}
+                                                  return bst'
+                  _                    -> do dbg $ "Received " ++ show resp
+                                             writeChan chan resp
+        bs <- gets boardState
+        tid <- liftIO $ forkIO $ forever (listener bs)
         debug $ "Started listener thread: " ++ show tid
 
 -- | Initialize our board, get capabilities, etc

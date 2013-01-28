@@ -31,11 +31,11 @@ queryFirmware = do
           Firmware v1 v2 m -> return (v1, v2, m)
           _                -> error $ "queryFirmware: Got unexpected response for query firmware call: " ++ show r
 
--- | Delay the computaton for a given number of milli-seconds.
+-- | Delay the computaton for a given number of milli-seconds
 delay :: Int -> Arduino ()
 delay = liftIO . U.delay
 
--- | Set the mode on a particular pin on the board.
+-- | Set the mode on a particular pin on the board
 setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p m = do
    extras <- registerPinMode p m
@@ -47,7 +47,7 @@ digitalWrite :: Pin -> Bool -> Arduino ()
 digitalWrite p v = do
    -- first make sure we have this pin set as output
    pd <- getPinData p
-   when (pinMode pd /= OUTPUT) $ U.die ("Invalid digital-write call on pin " ++ show p)
+   when (pinMode pd /= OUTPUT) $ U.die ("Invalid digitalWrite call on pin " ++ show p)
                                        [ "The current mode for this pin is: " ++ show (pinMode pd)
                                        , "For digitalWrite, it must be set to: " ++ show OUTPUT
                                        , "via a proper call to setPinMode"
@@ -55,21 +55,16 @@ digitalWrite p v = do
    (lsb, msb) <- computePortData p v
    send $ DigitalPortWrite (pinPort p) lsb msb
 
-digitalRead :: Pin -> Arduino Bool
-digitalRead = error "digitalRead: TBD"
-{-
 -- | Read the value of a pin in digital mode.
--- This should just return the last cached value if any
--- Otherwise prod it
 digitalRead :: Pin -> Arduino Bool
 digitalRead p = do
-        let (port, _) = pinPort p
-        send $ DigitalReport port True
-        send $ DigitalRead p
-        r <- recv
-        case r of
-          DigitalPinState p' _ b -> if p == p'
-                                    then return b
-                                    else error $ "digitalRead: Got unexpected response for " ++ show p' ++ " instead of " ++ show p'
-          _                     -> error $ "digitalRead: Got unexpected response for query DigitalReport: " ++ show r
--}
+   -- first make sure we have this pin set as input
+   pd <- getPinData p
+   when (pinMode pd /= INPUT) $ U.die ("Invalid digitalRead call on pin " ++ show p)
+                                      [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                      , "For digitalWrite, it must be set to: " ++ show INPUT
+                                      , "via a proper call to setPinMode"
+                                      ]
+   return $ case pinValue pd of
+              Just (Left v) -> v
+              _             -> False -- no (correctly-typed) value reported yet, default to False
