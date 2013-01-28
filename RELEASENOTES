@@ -1,7 +1,14 @@
 Hackage: http://hackage.haskell.org/package/hArduino
 GitHub:  http://leventerkok.github.com/hArduino 
 
-Latest Hackage released version: 0.1
+Latest Hackage released version: 0.2
+
+======================================================================
+Version 0.2, 2013-01-27
+
+ - Rewrite the communication engine
+ - Digital input/output implementation
+ - Add switch example
 
 ======================================================================
 Version 0.1, 2013-01-14
