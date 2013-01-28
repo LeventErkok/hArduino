@@ -13,7 +13,7 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, writeChan, readChan, forkIO, modifyMVar_)
+import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit)
@@ -56,6 +56,7 @@ withArduino verbose fp program =
                                          analogReportingPins  = S.empty
                                        , digitalReportingPins = S.empty
                                        , pinStates            = M.empty
+                                       , digitalWakeUpQueue   = []
                                      }
                 bs <- newMVar initBoardState
                 dc <- newChan
@@ -125,7 +126,11 @@ setupListener = do
                                                         where idx = pinPortIndex o
                                                               newVal | idx <= 6 = l `testBit` fromIntegral idx
                                                                      | True     = h `testBit` fromIntegral (idx - 7)
-                                                  let bst' = bst{pinStates = M.mapWithKey upd (pinStates bst)}
+                                                  let wakeUpQ = digitalWakeUpQueue bst
+                                                      bst' = bst{ pinStates          = M.mapWithKey upd (pinStates bst)
+                                                                , digitalWakeUpQueue = []
+                                                                }
+                                                  mapM_ (`putMVar` ()) wakeUpQ
                                                   return bst'
                   _                    -> do dbg $ "Received " ++ show resp
                                              writeChan chan resp

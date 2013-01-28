@@ -29,7 +29,7 @@ module System.Hardware.Arduino (
   -- ** Reading and Writing digital values
   , digitalRead, digitalWrite
   -- ** Misc utilities
-  , delay
+  , waitFor, delay
   -- * Hardware components on the board
   -- ** Pins
   , pin, PinMode(..)

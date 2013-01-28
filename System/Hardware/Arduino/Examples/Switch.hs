@@ -11,9 +11,8 @@
 
 module System.Hardware.Arduino.Examples.Switch where
 
-import Control.Monad           (forever)
-import Control.Monad.Trans     (liftIO)
-import System.IO               (hSetBuffering, BufferMode(NoBuffering), stdout)
+import Control.Monad.Trans (liftIO)
+import System.IO           (hSetBuffering, BufferMode(NoBuffering), stdout)
 
 import System.Hardware.Arduino
 
@@ -45,7 +44,6 @@ switch = withArduino False "/dev/cu.usbmodemfd131" $ do
          | prev /= new = do liftIO $ putStrLn $ "Button is currently " ++ if new then "ON" else "OFF"
                             digitalWrite led new
          | True        = return ()
-       go prev = forever $ do new <- digitalRead button
-                              report prev new
-                              delay 1000
-                              go new
+       go prev = do new <- waitFor button
+                    report prev new
+                    go new

@@ -124,9 +124,10 @@ data PinData = PinData {
 
 -- | State of the board
 data BoardState = BoardState {
-                    analogReportingPins  :: S.Set Pin           -- ^ Which analog pins are reporting
-                  , digitalReportingPins :: S.Set Pin           -- ^ Which digital pins are reporting
-                  , pinStates            :: M.Map Pin PinData   -- ^ For-each pin, store its data
+                    analogReportingPins  :: S.Set Pin         -- ^ Which analog pins are reporting
+                  , digitalReportingPins :: S.Set Pin         -- ^ Which digital pins are reporting
+                  , pinStates            :: M.Map Pin PinData -- ^ For-each pin, store its data
+                  , digitalWakeUpQueue   :: [MVar ()]         -- ^ Semaphore list to wake-up upon receiving a digital message for this pin
                   }
 
 -- | State of the computation
@@ -194,6 +195,12 @@ computePortData curPin newValue = do
                                               PinData{pinMode = OUTPUT, pinValue = Just (Left newValue)}
                                               (pinStates bst)}
      return (bst', (lsb, msb))
+
+-- | Keep track of listeners on a digital message
+digitalWakeUp :: MVar () -> Arduino ()
+digitalWakeUp semaphore = do
+    bs <- gets boardState
+    liftIO $ modifyMVar_ bs $ \bst -> return bst{digitalWakeUpQueue = semaphore : digitalWakeUpQueue bst}
 
 -- | Firmata commands, see: http://firmata.org/wiki/Protocol#Message_Types
 data FirmataCmd = ANALOG_MESSAGE      Pin  -- ^ @0xE0@ pin

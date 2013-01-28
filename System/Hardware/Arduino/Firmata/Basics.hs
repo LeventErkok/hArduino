@@ -12,6 +12,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Firmata.Basics where
 
+import Control.Concurrent  (newEmptyMVar, readMVar)
 import Control.Monad       (when)
 import Control.Monad.Trans (liftIO)
 import Data.Word           (Word8)
@@ -55,7 +56,9 @@ digitalWrite p v = do
    (lsb, msb) <- computePortData p v
    send $ DigitalPortWrite (pinPort p) lsb msb
 
--- | Read the value of a pin in digital mode.
+-- | Read the value of a pin in digital mode; this is a non-blocking call, returning
+-- the current value immediately. See 'waitFor' for a version that waits for a change
+-- in the pin first.
 digitalRead :: Pin -> Arduino Bool
 digitalRead p = do
    -- first make sure we have this pin set as input
@@ -68,3 +71,23 @@ digitalRead p = do
    return $ case pinValue pd of
               Just (Left v) -> v
               _             -> False -- no (correctly-typed) value reported yet, default to False
+
+-- | Wait for a change in the value of the digital input pin. Returns the new value.
+-- Note that this is a blocking call. For a non-blocking version, see 'digitalRead', which returns the current
+-- value of a pin immediately.
+waitFor :: Pin -> Arduino Bool
+waitFor p = do
+   curVal <- digitalRead p
+   let wait = do sleepTillDigitalMessage
+                 newVal <- digitalRead p
+                 if newVal == curVal
+                    then wait
+                    else return newVal
+   wait
+
+-- | Sleep until we receive a digital message from the board
+sleepTillDigitalMessage :: Arduino ()
+sleepTillDigitalMessage = do
+        semaphore <- liftIO newEmptyMVar
+        digitalWakeUp semaphore
+        liftIO $ readMVar semaphore
