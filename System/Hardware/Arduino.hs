@@ -30,7 +30,7 @@ module System.Hardware.Arduino (
   -- *** Writing digital values
   , digitalWrite
   -- *** Reading digital values
-  , digitalRead,  pullUpResistor, waitFor
+  , digitalRead,  pullUpResistor, waitFor, waitAny, waitAnyHigh, waitAnyLow
   -- ** Misc utilities
   , delay
   -- * Hardware components on the board

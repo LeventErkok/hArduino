@@ -13,7 +13,7 @@
 module System.Hardware.Arduino.Firmata.Basics where
 
 import Control.Concurrent  (newEmptyMVar, readMVar)
-import Control.Monad       (when)
+import Control.Monad       (when, unless, void)
 import Control.Monad.Trans (liftIO)
 import Data.Word           (Word8)
 
@@ -89,13 +89,48 @@ digitalRead p = do
 -- Note that this is a blocking call. For a non-blocking version, see 'digitalRead', which returns the current
 -- value of a pin immediately.
 waitFor :: Pin -> Arduino Bool
-waitFor p = do
-   curVal <- digitalRead p
+waitFor p = head `fmap` waitAny [p]
+
+-- | Wait for a change in any of the given pins. Once a change is detected, all the new values are
+-- returned. Similar to 'waitFor', but is useful when we are watching multiple digital inputs.
+waitAny :: [Pin] -> Arduino [Bool]
+waitAny ps = map snd `fmap` waitGeneric ps
+
+-- | Wait for any of the given pins to go from low to high. If all of the pins are high to start
+-- with, then we first wait for one of them to go low, and then wait for one of them to go back high.
+-- Returns the new values.
+waitAnyHigh :: [Pin] -> Arduino [Bool]
+waitAnyHigh ps = do
+   curVals <- mapM digitalRead ps
+   when (and curVals) $ void $ waitAnyLow ps   -- all are H to start with, wait for at least one to go low
+   vs <- waitGeneric ps  -- wait for some change
+   if (False, True) `elem` vs
+      then return $ map snd vs
+      else waitAnyHigh ps
+
+-- | Wait for any of the given pins to go from high to low. If all of the pins are low to start
+-- with, then we first wait for one of them to go high, and then wait for one of them to go back low.
+-- Returns the new values.
+waitAnyLow :: [Pin] -> Arduino [Bool]
+waitAnyLow ps = do
+   curVals <- mapM digitalRead ps
+   unless (or curVals) $ void $ waitAnyHigh ps   -- all are L to start with, wait for at least one to go high
+   vs <- waitGeneric ps  -- wait for some change
+   if (True, False) `elem` vs
+      then return $ map snd vs
+      else waitAnyLow ps
+
+-- | A utility function, waits for any change on any given pin
+-- and returns both old and new values. It's guaranteed that
+-- at least one returned pair have differing values.
+waitGeneric :: [Pin] -> Arduino [(Bool, Bool)]
+waitGeneric ps = do
+   curVals <- mapM digitalRead ps
    semaphore <- liftIO newEmptyMVar
    let wait = do digitalWakeUp semaphore
                  liftIO $ readMVar semaphore
-                 newVal <- digitalRead p
-                 if newVal == curVal
+                 newVals <- mapM digitalRead ps
+                 if curVals == newVals
                     then wait
-                    else return newVal
+                    else return $ zip curVals newVals
    wait

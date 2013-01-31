@@ -15,7 +15,7 @@
 module System.Hardware.Arduino.Data where
 
 import Control.Applicative        (Applicative)
-import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, readMVar)
+import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
@@ -157,11 +157,11 @@ getPinModes p = do
 getPinData :: Pin -> Arduino PinData
 getPinData p = do
   bs  <- gets boardState
-  bst <- liftIO $ readMVar bs
-  case p `M.lookup` pinStates bst of
-    Nothing -> die ("Trying to access " ++ show p ++ " without proper configuration.")
-                   ["Make sure that you use 'setPinMode' to configure this pin first."]
-    Just pd -> return pd
+  liftIO $ withMVar bs $ \bst ->
+     case p `M.lookup` pinStates bst of
+       Nothing -> die ("Trying to access " ++ show p ++ " without proper configuration.")
+                      ["Make sure that you use 'setPinMode' to configure this pin first."]
+       Just pd -> return pd
 
 -- | Given a pin, collect the digital value corresponding to the
 -- port it belongs to, where the new value of the current pin is given
