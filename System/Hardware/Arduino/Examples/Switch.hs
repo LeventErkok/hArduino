@@ -39,4 +39,5 @@ switch = withArduino False "/dev/cu.usbmodemfd131" $ do
  where button = pin 2
        led    = pin 7
        go s   = do liftIO $ putStrLn $ "Button is currently " ++ if s then "ON" else "OFF"
+                   digitalWrite led s
                    go =<< waitFor button
