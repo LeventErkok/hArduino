@@ -4,6 +4,14 @@ GitHub:  http://leventerkok.github.com/hArduino
 Latest Hackage released version: 0.2
 
 ======================================================================
+Version 0.3, Not yet released
+
+ - Add support for pull-up resistors
+ - Implement routines for waiting on digital triggers (waitAnyHigh,
+   waitAnyLow, etc.)
+ - Add counter example
+
+======================================================================
 Version 0.2, 2013-01-28
 
  - Rewrite the communication engine
