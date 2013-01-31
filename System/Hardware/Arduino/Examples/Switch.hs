@@ -35,15 +35,8 @@ switch = withArduino False "/dev/cu.usbmodemfd131" $ do
             liftIO $ hSetBuffering stdout NoBuffering
             setPinMode led OUTPUT
             setPinMode button INPUT
-            current <- digitalRead button
-            report (not current) current
-            go current
+            go =<< digitalRead button
  where button = pin 2
        led    = pin 7
-       report prev new
-         | prev /= new = do liftIO $ putStrLn $ "Button is currently " ++ if new then "ON" else "OFF"
-                            digitalWrite led new
-         | True        = return ()
-       go prev = do new <- waitFor button
-                    report prev new
-                    go new
+       go s   = do liftIO $ putStrLn $ "Button is currently " ++ if s then "ON" else "OFF"
+                   go =<< waitFor button
