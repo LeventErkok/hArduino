@@ -26,10 +26,13 @@ module System.Hardware.Arduino (
   , queryFirmware
   -- ** Controlling the pins
   , setPinMode
-  -- ** Reading and Writing digital values
-  , digitalRead, digitalWrite
+  -- ** Digital I/O
+  -- *** Writing digital values
+  , digitalWrite
+  -- *** Reading digital values
+  , digitalRead,  pullUpResistor, waitFor
   -- ** Misc utilities
-  , waitFor, delay
+  , delay
   -- * Hardware components on the board
   -- ** Pins
   , pin, PinMode(..)

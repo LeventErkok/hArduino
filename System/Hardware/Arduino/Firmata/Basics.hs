@@ -56,6 +56,19 @@ digitalWrite p v = do
    (lsb, msb) <- computePortData p v
    send $ DigitalPortWrite (pinPort p) lsb msb
 
+-- | Turn on/off internal pull-up resistor on an input pin
+pullUpResistor :: Pin -> Bool -> Arduino ()
+pullUpResistor p v = do
+   -- first make sure we have this pin set as input
+   pd <- getPinData p
+   when (pinMode pd /= INPUT) $ U.die ("Invalid turnOnPullUpResistor call on pin " ++ show p)
+                                      [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                      , "For turnOnPullUpResistor, it must be set to: " ++ show INPUT
+                                      , "via a proper call to setPinMode"
+                                      ]
+   (lsb, msb) <- computePortData p v
+   send $ DigitalPortWrite (pinPort p) lsb msb
+
 -- | Read the value of a pin in digital mode; this is a non-blocking call, returning
 -- the current value immediately. See 'waitFor' for a version that waits for a change
 -- in the pin first.

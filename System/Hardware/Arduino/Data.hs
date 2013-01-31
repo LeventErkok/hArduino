@@ -15,7 +15,7 @@
 module System.Hardware.Arduino.Data where
 
 import Control.Applicative        (Applicative)
-import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, readMVar)
+import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, readMVar)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
@@ -176,7 +176,7 @@ computePortData curPin newValue = do
   let curPort  = pinPort curPin
   let curIndex = pinPortIndex curPin
   bs <- gets boardState
-  liftIO $ modifyMVar bs $ \bst -> do
+  liftIO $ withMVar bs $ \bst -> do
      let values = [(pinPortIndex p, pinValue pd) | (p, pd) <- M.assocs (pinStates bst), curPort == pinPort p, pinMode pd `elem` [INPUT, OUTPUT]]
          getVal i
            | i == curIndex                             = newValue
@@ -185,12 +185,7 @@ computePortData curPin newValue = do
          [b0, b1, b2, b3, b4, b5, b6, b7] = map getVal [0 .. 7]
          lsb = foldr (\(i, b) m -> if b then m `setBit` i     else m) 0 (zip [0..] [b0, b1, b2, b3, b4, b5, b6])
          msb = foldr (\(i, b) m -> if b then m `setBit` (i-7) else m) 0 (zip [7..] [b7])
-     -- update internal-value of the pin
-     let bst' = bst {pinStates = M.insertWith (\_ o -> o{pinValue = Just (Left newValue)})
-                                              curPin
-                                              PinData{pinMode = OUTPUT, pinValue = Just (Left newValue)}
-                                              (pinStates bst)}
-     return (bst', (lsb, msb))
+     return (lsb, msb)
 
 -- | Keep track of listeners on a digital message
 digitalWakeUp :: MVar () -> Arduino ()
