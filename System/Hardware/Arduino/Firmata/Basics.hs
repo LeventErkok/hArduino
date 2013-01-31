@@ -78,16 +78,11 @@ digitalRead p = do
 waitFor :: Pin -> Arduino Bool
 waitFor p = do
    curVal <- digitalRead p
-   let wait = do sleepTillDigitalMessage
+   semaphore <- liftIO newEmptyMVar
+   let wait = do digitalWakeUp semaphore
+                 liftIO $ readMVar semaphore
                  newVal <- digitalRead p
                  if newVal == curVal
                     then wait
                     else return newVal
    wait
-
--- | Sleep until we receive a digital message from the board
-sleepTillDigitalMessage :: Arduino ()
-sleepTillDigitalMessage = do
-        semaphore <- liftIO newEmptyMVar
-        digitalWakeUp semaphore
-        liftIO $ readMVar semaphore
