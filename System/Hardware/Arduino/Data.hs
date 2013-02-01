@@ -71,7 +71,8 @@ data PinMode = INPUT    -- ^ Digital input
              deriving (Eq, Show, Enum)
 
 -- | A request, as sent to Arduino
-data Request = QueryFirmware                        -- ^ Query the Firmata version installed
+data Request = SystemReset                          -- ^ Send system reset
+             | QueryFirmware                        -- ^ Query the Firmata version installed
              | CapabilityQuery                      -- ^ Query the capabilities of the board
              | AnalogMappingQuery                   -- ^ Query the mapping of analog pins
              | SetPinMode         Pin  PinMode      -- ^ Set the mode on a pin

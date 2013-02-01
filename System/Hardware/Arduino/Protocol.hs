@@ -33,6 +33,7 @@ nonSysEx cmd bs = B.pack $ firmataCmdVal cmd : bs
 -- | Package a request as a sequence of bytes to be sent to the board
 -- using the Firmata protocol.
 package :: Request -> B.ByteString
+package SystemReset              = nonSysEx SYSTEM_RESET            []
 package QueryFirmware            = sysEx    REPORT_FIRMWARE         []
 package CapabilityQuery          = sysEx    CAPABILITY_QUERY        []
 package AnalogMappingQuery       = sysEx    ANALOG_MAPPING_QUERY    []

@@ -141,8 +141,10 @@ setupListener = do
 -- | Initialize our board, get capabilities, etc
 initialize :: Arduino ()
 initialize = do
-     -- Step 1: Set up the listener thread
+     -- Step 0: Set up the listener thread
      setupListener
+     -- Step 1: Send a reset to get things going
+     send SystemReset
      -- Step 2: Send query-firmware, and wait until we get a response
      handshake QueryFirmware
                (\r -> case r of {Firmware{} -> True; _ -> False})
