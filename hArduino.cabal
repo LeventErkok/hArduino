@@ -37,9 +37,10 @@ Library
                   -- threaddelay is broken on Mac. See: http://hackage.haskell.org/trac/ghc/ticket/7299
                   , process
   Exposed-modules : System.Hardware.Arduino
+                  , System.Hardware.Arduino.Examples.Analog
                   , System.Hardware.Arduino.Examples.Blink
-                  , System.Hardware.Arduino.Examples.Switch
                   , System.Hardware.Arduino.Examples.Counter
+                  , System.Hardware.Arduino.Examples.Switch
   Other-modules   : System.Hardware.Arduino.Comm
                   , System.Hardware.Arduino.Data
                   , System.Hardware.Arduino.Firmata
