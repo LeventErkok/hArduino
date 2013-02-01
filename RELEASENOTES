@@ -10,7 +10,9 @@ Version 0.3, Not yet released
  - Implement routines for waiting on digital triggers (waitAnyHigh,
    waitAnyLow, etc.) These routines allow fine control of digital
    input pins on the Arduino.
+ - Add support for reading analog values
  - Add counter example
+ - Add analog-reading example
 
 ======================================================================
 Version 0.2, 2013-01-28
