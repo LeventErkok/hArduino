@@ -31,6 +31,8 @@ module System.Hardware.Arduino (
   , digitalWrite
   -- *** Reading digital values
   , digitalRead,  pullUpResistor, waitFor, waitAny, waitAnyHigh, waitAnyLow
+  -- ** Analog Input
+  , analogRead
   -- ** Misc utilities
   , delay
   -- * Hardware components on the board

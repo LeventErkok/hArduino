@@ -134,3 +134,19 @@ waitGeneric ps = do
                     then wait
                     else return $ zip curVals newVals
    wait
+
+-- | Read the value of a pin in analog mode; this is a non-blocking call.
+-- Return value is @0@ if the voltage on the pin is 0V, and @1023@ if it is
+-- 5V, properly scaled.
+analogRead :: Pin -> Arduino Int
+analogRead p = do
+   -- first make sure we have this pin set as analog
+   pd <- getPinData p
+   when (pinMode pd /= ANALOG) $ U.die ("Invalid analogRead call on pin " ++ show p)
+                                        [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                        , "For analogRead, it must be set to: " ++ show ANALOG
+                                        , "via a proper call to setPinMode"
+                                        ]
+   return $ case pinValue pd of
+              Just (Right v) -> v
+              _              -> 0 -- no (correctly-typed) value reported yet, default to False

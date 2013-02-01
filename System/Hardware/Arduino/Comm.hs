@@ -16,11 +16,12 @@ import Control.Monad        (when, forever)
 import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
-import Data.Bits            (testBit)
+import Data.Bits            (testBit, (.&.))
+import Data.Maybe           (listToMaybe)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
 import qualified Data.ByteString            as B (unpack, length)
-import qualified Data.Map                   as M (empty, mapWithKey)
+import qualified Data.Map                   as M (empty, mapWithKey, insert, assocs, lookup)
 import qualified Data.Set                   as S (empty)
 import qualified System.Hardware.Serialport as S (withSerial, defaultSerialSettings, CommSpeed(CS57600), commSpeed, recv, send)
 
@@ -53,7 +54,8 @@ withArduino verbose fp program =
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
                 let initBoardState = BoardState {
-                                         analogReportingPins  = S.empty
+                                         boardCapabilities    = BoardCapabilities M.empty
+                                       , analogReportingPins  = S.empty
                                        , digitalReportingPins = S.empty
                                        , pinStates            = M.empty
                                        , digitalWakeUpQueue   = []
@@ -118,7 +120,20 @@ setupListener = do
                            Right nonSysEx    -> unpackageNonSysEx getBytes nonSysEx
                 case resp of
                   Unimplemented{}      -> dbg $ "Ignoring the received response: " ++ show resp
-                  DigitalMessage p l h -> do dbg $ "Updating port " ++ show p ++ " values with " ++ showByteList [l,h]
+                  AnalogMessage mp l h -> modifyMVar_ bs $ \bst ->
+                                           do -- the mp is indexed at 0; need to find the mapping
+                                              let BoardCapabilities caps = boardCapabilities bst
+                                                  mbP = listToMaybe [mappedPin | (mappedPin, (Just mp', _)) <- M.assocs caps, pinNo mp == mp']
+                                              case mbP of
+                                                Nothing -> return bst -- Mapping hasn't happened yet
+                                                Just p  -> do
+                                                   let v = (128 * fromIntegral (h .&. 0x07) + fromIntegral (l .&. 0x7f)) :: Int
+                                                   case pinValue `fmap` (p `M.lookup` pinStates bst) of
+                                                     Just (Just (Right v'))
+                                                       | abs (v - v') < 10  -> return () -- be quiet, otherwise prints too much
+                                                     _                      -> dbg $ "Updating analog pin " ++ show p ++ " values with " ++ showByteList [l,h] ++ " (" ++ show v ++ ")"
+                                                   return bst{ pinStates = M.insert p PinData{pinMode = ANALOG, pinValue = Just (Right v)} (pinStates bst) }
+                  DigitalMessage p l h -> do dbg $ "Updating digital port " ++ show p ++ " values with " ++ showByteList [l,h]
                                              modifyMVar_ bs $ \bst -> do
                                                   let upd o od | p /= pinPort o               = od   -- different port, no change
                                                                | pinMode od `notElem` [INPUT] = od   -- not an input pin, ignore
@@ -156,19 +171,23 @@ initialize = do
      -- Step 4: Send analog-mapping query
      handshake AnalogMappingQuery
                (\r -> case r of {AnalogMapping{} -> True; _ -> False})
-               (\(AnalogMapping bs) -> do BoardCapabilities m <- gets capabilities
-                                          modify (\s -> s{capabilities = BoardCapabilities (M.mapWithKey (mapAnalog bs) m)}))
+               (\(AnalogMapping as) -> do BoardCapabilities m <- gets capabilities
+                                          -- need to put capabilities to both outer and inner state
+                                          let caps = BoardCapabilities (M.mapWithKey (mapAnalog as) m)
+                                          modify (\s -> s{capabilities = caps})
+                                          bs <- gets boardState
+                                          liftIO $ modifyMVar_ bs $ \bst -> return bst{boardCapabilities = caps})
      -- We're done, print capabilities in debug mode
-     cs <- gets capabilities
+     caps <- gets capabilities
      dbg <- gets message
-     liftIO $ dbg $ "Handshake complete. Board capabilities:\n" ++ show cs
+     liftIO $ dbg $ "Handshake complete. Board capabilities:\n" ++ show caps
  where handshake msg isOK process = do
            dbg <- gets message
            send msg
            let wait = do resp <- recv
                          if isOK resp
                             then process resp
-                            else do liftIO $ dbg $ "Skpping unexpected response: " ++ show resp
+                            else do liftIO $ dbg $ "Skipping unexpected response: " ++ show resp
                                     wait
            wait
        mapAnalog bs p c

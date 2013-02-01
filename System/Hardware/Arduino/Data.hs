@@ -86,6 +86,7 @@ data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/
               | Capabilities BoardCapabilities       -- ^ Capabilities report
               | AnalogMapping [Word8]                -- ^ Analog pin mappings
               | DigitalMessage Port Word8 Word8      -- ^ Status of a port
+              | AnalogMessage  Pin  Word8 Word8      -- ^ Status of an analog pin
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
@@ -93,6 +94,7 @@ instance Show Response where
   show (Capabilities b)        = "Capabilities:\n" ++ show b
   show (AnalogMapping bs)      = "AnalogMapping: " ++ showByteList bs
   show (DigitalMessage p l h)  = "DigitalMessage " ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
+  show (AnalogMessage  p l h)  = "AnalogMessage "  ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " " ++ showByteList bs
 
 -- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
@@ -121,10 +123,11 @@ data PinData = PinData {
 
 -- | State of the board
 data BoardState = BoardState {
-                    analogReportingPins  :: S.Set Pin         -- ^ Which analog pins are reporting
-                  , digitalReportingPins :: S.Set Pin         -- ^ Which digital pins are reporting
-                  , pinStates            :: M.Map Pin PinData -- ^ For-each pin, store its data
-                  , digitalWakeUpQueue   :: [MVar ()]         -- ^ Semaphore list to wake-up upon receiving a digital message for this pin
+                    boardCapabilities    :: BoardCapabilities   -- ^ Capabilities of the board
+                  , analogReportingPins  :: S.Set Pin           -- ^ Which analog pins are reporting
+                  , digitalReportingPins :: S.Set Pin           -- ^ Which digital pins are reporting
+                  , pinStates            :: M.Map Pin PinData   -- ^ For-each pin, store its data
+                  , digitalWakeUpQueue   :: [MVar ()]           -- ^ Semaphore list to wake-up upon receiving a digital message for this pin
                   }
 
 -- | State of the computation
@@ -132,9 +135,9 @@ data ArduinoState = ArduinoState {
                 message       :: String -> IO ()     -- ^ Current debugging routine
               , port          :: SerialPort          -- ^ Serial port we are communicating on
               , firmataID     :: String              -- ^ The ID of the board (as identified by the Board itself)
-              , capabilities  :: BoardCapabilities   -- ^ Capabilities of the board
               , boardState    :: MVar BoardState     -- ^ Current state of the board
               , deviceChannel :: Chan Response       -- ^ Incoming messages from the board
+              , capabilities  :: BoardCapabilities   -- ^ Capabilities of the board
               }
 
 -- | The Arduino monad.

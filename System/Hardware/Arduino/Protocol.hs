@@ -68,12 +68,14 @@ getCapabilities bs = BoardCapabilities $ M.fromList $ zipWith (\p c -> (p, (Noth
 unpackageNonSysEx :: (Int -> IO [Word8]) -> FirmataCmd -> IO Response
 unpackageNonSysEx getBytes c = grab c
  where unimplemented n = Unimplemented (Just (show c)) `fmap` getBytes n
-       grab (ANALOG_MESSAGE      _pin)  = unimplemented 2
+       grab (ANALOG_MESSAGE       p)    = getBytes 2 >>= \[l, h] -> return (AnalogMessage  p l h)
        grab (DIGITAL_MESSAGE      p)    = getBytes 2 >>= \[l, h] -> return (DigitalMessage p l h)
+       -- we should never see any of the following since they are "request" codes
+       -- TBD: Maybe we should put them in a different data-type
        grab (REPORT_ANALOG_PIN   _pin)  = unimplemented 1
        grab (REPORT_DIGITAL_PORT _port) = unimplemented 1
-       grab START_SYSEX                 = unimplemented 0   -- we should never see this
+       grab START_SYSEX                 = unimplemented 0
        grab SET_PIN_MODE                = unimplemented 2
-       grab END_SYSEX                   = unimplemented 0   -- we should never see this
+       grab END_SYSEX                   = unimplemented 0
        grab PROTOCOL_VERSION            = unimplemented 2
        grab SYSTEM_RESET                = unimplemented 0
