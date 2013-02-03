@@ -315,11 +315,42 @@ registerPinMode p m = do
             -> die ("Invalid mode " ++ show m ++ " set for " ++ show p)
                    ["Supported modes for this pin are: " ++ unwords (if null ms then ["NONE"] else map show ms)]
           _ -> return ()
-        -- register the pin mode
+        -- see if there was a mode already set for this pin
+        bs  <- gets boardState
+        mbOldMode <- liftIO $ withMVar bs $ \bst ->
+                                case p `M.lookup` pinStates bst of
+                                  Nothing -> return Nothing -- completely new, register
+                                  Just pd -> return $ Just $ pinMode pd
+        -- depending on old/new mode, determine what actions to take
+        let registerNewMode = modifyMVar_ bs $ \bst -> return bst{pinStates = M.insert p PinData{pinMode = m, pinValue = Nothing} (pinStates bst) }
+        case mbOldMode of
+          Nothing -> do liftIO registerNewMode
+                        getModeActions p m
+          Just m' | m == m' -> return []  -- no mode change, nothing to do
+                  | True    -> do liftIO registerNewMode
+                                  remActs <- getRemovalActions p m'
+                                  addActs <- getModeActions p m
+                                  return $ remActs ++ addActs
+
+-- A mode was removed from this pin, update internal state and determine any necessary actions to remove it
+getRemovalActions :: Pin -> PinMode -> Arduino [Request]
+getRemovalActions p INPUT  = do -- This pin is no longer digital input
         bs <- gets boardState
-        liftIO $ modifyMVar_ bs $ \bst -> return bst{pinStates = M.insert p PinData{pinMode = m, pinValue = Nothing} (pinStates bst) }
-        -- now return extra actions we need to take for this mode
-        getModeActions p m
+        liftIO $ modifyMVar bs $ \bst -> do
+                let dPins = p `S.delete` digitalReportingPins bst
+                    port  = pinPort p
+                    acts  = [DigitalReport port False | port `notElem` map pinPort (S.elems dPins)]   -- no need for a digital report on this port anymore
+                    bst'  = bst { digitalReportingPins = dPins }
+                return (bst', acts)
+getRemovalActions p ANALOG = do -- This pin is no longer analog
+        bs <- gets boardState
+        liftIO $ modifyMVar bs $ \bst -> do
+                let aPins = analogReportingPins bst
+                    acts  = [AnalogReport p False | p `S.member` aPins] -- no need for an analog report on this port anymore
+                    bst'  = bst { analogReportingPins = p `S.delete` aPins }
+                return (bst', acts)
+getRemovalActions _ OUTPUT = return []
+getRemovalActions p m = error $ "hArduino: getRemovalActions: TBD: Unsupported mode: " ++ show m ++ " on pin " ++ show p
 
 -- | Depending on a mode-set call, determine what further
 -- actions should be executed, such as enabling/disabling pin/port reporting
@@ -348,4 +379,5 @@ getModeActions p ANALOG = do -- This pin just configured for analog
                                    , digitalReportingPins = dPins
                                    }
                     return (bst', acts1 ++ acts2)
-getModeActions _ _    = return []
+getModeActions _ OUTPUT = return []
+getModeActions p m      = error $ "hArduino: getModeActions: TBD: Unsupported mode: " ++ show m ++ " on pin " ++ show p
