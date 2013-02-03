@@ -15,6 +15,7 @@ module System.Hardware.Arduino.Firmata where
 import Control.Concurrent  (newEmptyMVar, readMVar)
 import Control.Monad       (when, unless, void)
 import Control.Monad.Trans (liftIO)
+import Data.Bits           ((.&.), shiftR)
 import Data.Word           (Word8)
 
 import System.Hardware.Arduino.Data
@@ -135,9 +136,10 @@ waitGeneric ps = do
                     else return $ zip curVals newVals
    wait
 
--- | Read the value of a pin in analog mode; this is a non-blocking call.
--- Return value is @0@ if the voltage on the pin is 0V, and @1023@ if it is
--- 5V, properly scaled.
+-- | Read the value of a pin in analog mode; this is a non-blocking call, immediately
+-- returning the last sampled value. It returns @0@ if the voltage on the pin
+-- is 0V, and @1023@ if it is 5V, properly scaled. (See `setAnalogSamplingInterval` for
+-- sampling frequency.)
 analogRead :: Pin -> Arduino Int
 analogRead p = do
    -- first make sure we have this pin set as analog
@@ -150,3 +152,17 @@ analogRead p = do
    return $ case pinValue pd of
               Just (Right v) -> v
               _              -> 0 -- no (correctly-typed) value reported yet, default to False
+
+-- | Set the analog sampling interval, in milliseconds. Arduino uses a default of 19ms to sample analog and I2C
+-- signals, which is fine for many applications, but can be modified if needed. The argument
+-- should be a number between @10@ and @16384@; @10@ being the minumum sampling interval supported by Arduino
+-- and @16383@ being the largest value we can represent in 14 bits that this message can handle. (Note that
+-- the largest value is just about @16@ seconds, which is plenty infrequent for all practical needs.)
+setAnalogSamplingInterval :: Int -> Arduino ()
+setAnalogSamplingInterval i
+  | i < 10 || i > 16383
+  = error $ "hArduino: setAnalogSamplingInterval: Allowed interval is [10, 16383] ms, received: " ++ show i
+  | True
+  = send $ SamplingInterval (fromIntegral lsb) (fromIntegral msb)
+  where lsb = i .&. 0x7f
+        msb = (i `shiftR` 7) .&. 0x7f

@@ -79,6 +79,7 @@ data Request = SystemReset                          -- ^ Send system reset
              | DigitalReport      Port Bool         -- ^ Digital report values on port enable/disable
              | AnalogReport       Pin  Bool         -- ^ Analog report values on pin enable/disable
              | DigitalPortWrite   Port Word8 Word8  -- ^ Set the values on a port digitally
+             | SamplingInterval   Word8 Word8       -- ^ Set the sampling interval
              deriving Show
 
 -- | A response, as returned from the Arduino
@@ -332,7 +333,7 @@ registerPinMode p m = do
                                   addActs <- getModeActions p m
                                   return $ remActs ++ addActs
 
--- A mode was removed from this pin, update internal state and determine any necessary actions to remove it
+-- | A mode was removed from this pin, update internal state and determine any necessary actions to remove it
 getRemovalActions :: Pin -> PinMode -> Arduino [Request]
 getRemovalActions p INPUT  = do -- This pin is no longer digital input
         bs <- gets boardState
