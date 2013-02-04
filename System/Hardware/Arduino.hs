@@ -37,7 +37,7 @@ module System.Hardware.Arduino (
   -- *** Reading analog values
   , analogRead
   -- * Controlling LCDs (Liquid Crystal Displays)
-  , LCDController(..), LCDDisplayProperties(..), registerLCD, setLCDProperties, writeLCD
+  , LCDController(..), LCDDisplayProperties(..), registerLCD, setLCDProperties, clearLCD, writeLCD
   -- * Misc utilities
   , delay
  )

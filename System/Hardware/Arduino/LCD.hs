@@ -14,9 +14,9 @@
 -------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
-module System.Hardware.Arduino.LCD(registerLCD, LCDDisplayProperties(..), setLCDProperties, writeLCD)  where
+module System.Hardware.Arduino.LCD(registerLCD, LCDDisplayProperties(..), setLCDProperties, clearLCD, writeLCD)  where
 
-import Control.Concurrent  (modifyMVar)
+import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad.State (gets, liftIO)
 import Data.Bits           (testBit, (.|.))
 import Data.Word           (Word8)
@@ -49,11 +49,26 @@ writeLCD _ m = liftIO $ putStrLn $ "TODO: This would go to the LCD: " ++ show m
 -- Low level interface, not available to the user
 ---------------------------------------------------------------------------------------
 
+-- | Entry modes
+data EntryModes = LCD_ENTRYLEFT
+                | LCD_ENTRYRIGHT
+                | LCD_ENTRYSHIFTINCREMENT
+                | LCD_ENTRYSHIFTDECREMENT
+
+-- | Convert entry mode to val.
+getModeVal :: EntryModes -> Word8
+getModeVal LCD_ENTRYLEFT           = 0x02
+getModeVal LCD_ENTRYRIGHT          = 0x00
+getModeVal LCD_ENTRYSHIFTINCREMENT = 0x01
+getModeVal LCD_ENTRYSHIFTDECREMENT = 0x00
+
 -- | Commands understood by Hitachi
 data Cmd = LCD_INITIALIZE
          | LCD_INITIALIZE_END
          | LCD_FUNCTIONSET
          | LCD_DISPLAYCONTROL Word8
+         | LCD_CLEARDISPLAY
+         | LCD_ENTRYMODESET [EntryModes]
 
 -- | Convert a command to a data-word
 getCmdVal :: LCDController -> Cmd -> Word8
@@ -69,6 +84,8 @@ getCmdVal Hitachi44780{lcdRows, dotMode5x10} = get
         get LCD_INITIALIZE_END     = 0x02
         get LCD_FUNCTIONSET        = 0x20 .|. displayFunction
         get (LCD_DISPLAYCONTROL w) = 0x08 .|. w
+        get LCD_CLEARDISPLAY       = 0x01
+        get (LCD_ENTRYMODESET ms)  = 0x04 .|. foldr ((.|.) . getModeVal) 0 ms
 
 -- | Display properties
 data LCDDisplayProperties = LCD_DISPLAYON  -- ^ Turn the display on
@@ -99,6 +116,8 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     sendCmd c LCD_INITIALIZE_END
     sendCmd c LCD_FUNCTIONSET
     setLCDProperties lcd [LCD_DISPLAYON, LCD_CURSOROFF, LCD_BLINKOFF]
+    clearLCD lcd
+    sendCmd c (LCD_ENTRYMODESET [LCD_ENTRYLEFT, LCD_ENTRYSHIFTDECREMENT])
 
 -- | Set display properties
 setLCDProperties :: LCD -> [LCDDisplayProperties] -> Arduino ()
@@ -110,6 +129,21 @@ setLCDProperties lcd props = do
                             Just (curProps, c) -> do let newProps = getPropVal curProps props
                                                      return (bst {lcds = M.insert lcd (newProps, c) (lcds bst)}, (c, newProps))
   sendCmd c (LCD_DISPLAYCONTROL displayProps)
+
+-- | Get the controller associated with the LCD
+getController :: LCD -> Arduino LCDController
+getController lcd = do
+  bs <- gets boardState
+  liftIO $ withMVar bs $ \bst -> case lcd `M.lookup` lcds bst of
+                                   Nothing     -> error $ "hArduino: Cannot locate " ++ show lcd
+                                   Just (_, c) -> return c
+
+-- | Clear the LCD
+clearLCD :: LCD -> Arduino ()
+clearLCD lcd = do
+   c <- getController lcd
+   sendCmd c LCD_CLEARDISPLAY
+   delay 2 -- give some time to make sure LCD is really cleared
 
 -- | Send a command to the LCD controller
 sendCmd :: LCDController -> Cmd -> Arduino ()

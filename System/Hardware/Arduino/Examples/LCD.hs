@@ -62,6 +62,7 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
                             m <- liftIO getLine
                             case m of
                              ":q" -> return ()
-                             _    -> do writeLCD lcd m
+                             _    -> do clearLCD lcd
+                                        writeLCD lcd m
                                         repl
               repl
