@@ -19,6 +19,7 @@ module System.Hardware.Arduino.LCD(registerLCD, LCDDisplayProperties(..), setLCD
 import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad.State (gets, liftIO)
 import Data.Bits           (testBit, (.|.))
+import Data.Char           (ord)
 import Data.Word           (Word8)
 
 import qualified Data.Map as M
@@ -43,7 +44,10 @@ registerLCD controller = do
 
 -- | Write a string on an LCD
 writeLCD :: LCD -> String -> Arduino ()
-writeLCD _ m = liftIO $ putStrLn $ "TODO: This would go to the LCD: " ++ show m
+writeLCD lcd m = do
+   c <- getController lcd
+   let cvt ch = fromIntegral (ord ch) .|. 0xFF
+   mapM_ (sendData c . cvt) m
 
 ---------------------------------------------------------------------------------------
 -- Low level interface, not available to the user
@@ -150,8 +154,8 @@ sendCmd :: LCDController -> Cmd -> Arduino ()
 sendCmd c = transmit False c . getCmdVal c
 
 -- | Send 4-bit data to the LCD controller
-_sendData :: LCDController -> Word8 -> Arduino ()
-_sendData = transmit True
+sendData :: LCDController -> Word8 -> Arduino ()
+sendData = transmit True
 
 -- | By controlling the enable-pin, indicate to the controller that
 -- the data is ready for it to process.
