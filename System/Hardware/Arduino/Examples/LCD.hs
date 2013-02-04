@@ -46,6 +46,10 @@ hitachi = Hitachi44780 { lcdRS   = pin 2  --     4      Register-select
                        , lcdD5   = pin 5  --    12      Data 5
                        , lcdD6   = pin 6  --    13      Data 6
                        , lcdD7   = pin 7  --    14      Data 7
+                       -- Other config variables for the display
+                       , lcdRows     = 2     -- 2 rows
+                       , lcdCols     = 16    -- of 16 columns
+                       , dotMode5x10 = False -- Using the standard 5x8 dots
                        }
 
 -- | Access the LCD connected to Arduino, making it show messages
