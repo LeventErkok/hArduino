@@ -41,6 +41,7 @@ Library
                   , System.Hardware.Arduino.Examples.Blink
                   , System.Hardware.Arduino.Examples.Counter
                   , System.Hardware.Arduino.Examples.Switch
+                  , System.Hardware.Arduino.Examples.LCD
   Other-modules   : System.Hardware.Arduino.Comm
                   , System.Hardware.Arduino.Data
                   , System.Hardware.Arduino.Firmata

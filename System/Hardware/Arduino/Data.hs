@@ -124,9 +124,10 @@ data PinData = PinData {
 
 -- | LCD's connected to the board
 newtype LCD = LCD Int
+            deriving (Eq, Ord)
 
 -- | Known LCD controllers
-data LCDController = Hitachi44780  -- ^ Hitachi LCD controller: <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller>
+data LCDController = Hitachi44780  -- ^ Hitachi LCD controller: See: <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller>
 
 -- | State of the board
 data BoardState = BoardState {

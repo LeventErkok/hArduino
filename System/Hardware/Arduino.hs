@@ -24,8 +24,8 @@ module System.Hardware.Arduino (
   -- * Programming the Arduino
   -- ** Basic handshake with the board
   , queryFirmware
-  -- ** Controlling the pins
-  , setPinMode
+  -- ** Accessing pins
+  , pin, PinMode(..), setPinMode
   -- ** Digital I/O
   -- *** Writing digital values
   , digitalWrite
@@ -36,14 +36,14 @@ module System.Hardware.Arduino (
   , setAnalogSamplingInterval
   -- *** Reading analog values
   , analogRead
-  -- ** Misc utilities
+  -- * Controlling LCDs (Liquid Crystal Displays)
+  , LCDController(..), registerLCD, writeLCD
+  -- * Misc utilities
   , delay
-  -- * Hardware components on the board
-  -- ** Pins
-  , pin, PinMode(..)
  )
  where
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Comm
 import System.Hardware.Arduino.Firmata
+import System.Hardware.Arduino.LCD
