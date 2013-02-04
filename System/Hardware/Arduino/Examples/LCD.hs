@@ -17,16 +17,35 @@ import System.Hardware.Arduino
 
 -- | Connections for a basic hitachi controller
 -- See <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller> for
--- pin layout.
+-- pin layout. For this demo, simply connect the LCD pins to the Arduino
+-- as follows:
+--
+--  * LCD pin @01@ to GND
+--
+--  * LCD pin @02@ to +5V
+--
+--  * LCD pin @03@ to a 10K potentiometer's viper
+--
+--  * LCD pin @04@ to Arduino pin @2@
+--
+--  * LCD pin @06@ to Arduino pin @3@
+--
+--  * LCD pin @11@ to Arduino pin @4@
+--
+--  * LCD pin @12@ to Arduino pin @5@
+--
+--  * LCD pin @13@ to Arduino pin @6@
+--
+--  * LCD pin @14@ to Arduino pin @7@
 hitachi :: LCDController
--- Connections:                   ARDUINO      Hitachi    Description
---------------------------------  -------   ------------ ----------------
-hitachi = Hitachi44780 { lcdRS   = pin 2   --    4       Register-select
-                       , lcdEN   = pin 3   --    6       Enable
-                       , lcdD4   = pin 4   --   11       Data 4
-                       , lcdD5   = pin 5   --   12       Data 5
-                       , lcdD6   = pin 6   --   13       Data 6
-                       , lcdD7   = pin 7   --   14       Data 7
+-- Connections:                   ARDUINO     Hitachi   Description
+--------------------------------  -------    ---------  ----------------
+hitachi = Hitachi44780 { lcdRS   = pin 2  --     4      Register-select
+                       , lcdEN   = pin 3  --     6      Enable
+                       , lcdD4   = pin 4  --    11      Data 4
+                       , lcdD5   = pin 5  --    12      Data 5
+                       , lcdD6   = pin 6  --    13      Data 6
+                       , lcdD7   = pin 7  --    14      Data 7
                        }
 
 -- | Access the LCD connected to Arduino, making it show messages
@@ -34,12 +53,11 @@ hitachi = Hitachi44780 { lcdRS   = pin 2   --    4       Register-select
 lcdDemo :: IO ()
 lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
               lcd <- registerLCD hitachi
-              go lcd
-  where go lcd = do liftIO $ putStrLn "Hitachi controller demo.. Type :q to quit."
-                    repl
-         where repl = do liftIO $ putStr "Message> "
-                         m <- liftIO getLine
-                         case m of
-                           ":q" -> return ()
-                           _    -> do writeLCD lcd m
-                                      repl
+              liftIO $ putStrLn "Hitachi controller demo.. Type :q to quit."
+              let repl = do liftIO $ putStr "Message> "
+                            m <- liftIO getLine
+                            case m of
+                             ":q" -> return ()
+                             _    -> do writeLCD lcd m
+                                        repl
+              repl
