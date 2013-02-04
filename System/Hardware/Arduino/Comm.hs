@@ -59,6 +59,7 @@ withArduino verbose fp program =
                                        , digitalReportingPins = S.empty
                                        , pinStates            = M.empty
                                        , digitalWakeUpQueue   = []
+                                       , lcds                 = M.empty
                                      }
                 bs <- newMVar initBoardState
                 dc <- newChan

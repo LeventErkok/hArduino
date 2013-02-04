@@ -122,13 +122,20 @@ data PinData = PinData {
                }
                deriving Show
 
+-- | LCD's connected to the board
+newtype LCD = LCD Int
+
+-- | Known LCD controllers
+data LCDController = Hitachi44780  -- ^ Hitachi LCD controller: <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller>
+
 -- | State of the board
 data BoardState = BoardState {
-                    boardCapabilities    :: BoardCapabilities   -- ^ Capabilities of the board
-                  , analogReportingPins  :: S.Set Pin           -- ^ Which analog pins are reporting
-                  , digitalReportingPins :: S.Set Pin           -- ^ Which digital pins are reporting
-                  , pinStates            :: M.Map Pin PinData   -- ^ For-each pin, store its data
-                  , digitalWakeUpQueue   :: [MVar ()]           -- ^ Semaphore list to wake-up upon receiving a digital message for this pin
+                    boardCapabilities    :: BoardCapabilities       -- ^ Capabilities of the board
+                  , analogReportingPins  :: S.Set Pin               -- ^ Which analog pins are reporting
+                  , digitalReportingPins :: S.Set Pin               -- ^ Which digital pins are reporting
+                  , pinStates            :: M.Map Pin PinData       -- ^ For-each pin, store its data
+                  , digitalWakeUpQueue   :: [MVar ()]               -- ^ Semaphore list to wake-up upon receiving a digital message
+                  , lcds                 :: M.Map LCD LCDController -- ^ LCD's attached to the board
                   }
 
 -- | State of the computation

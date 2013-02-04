@@ -1,0 +1,11 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  System.Hardware.Arduino.LCD
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- LCD (Liquid Crystal Display) parts supported by hArduino
+-------------------------------------------------------------------------------
+module System.Hardware.Arduino.LCD where

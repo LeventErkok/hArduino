@@ -46,3 +46,4 @@ Library
                   , System.Hardware.Arduino.Firmata
                   , System.Hardware.Arduino.Protocol
                   , System.Hardware.Arduino.Utils
+                  , System.Hardware.Arduino.LCD
