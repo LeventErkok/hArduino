@@ -39,6 +39,8 @@ import System.Hardware.Arduino
 --  * LCD pin @13@ to Arduino pin @11@
 --
 --  * LCD pin @14@ to Arduino pin @12@
+--
+--  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/Examples/Schematics/LCD.png>>
 hitachi :: LCDController
 -- Connections:                   ARDUINO     Hitachi   Description
 --------------------------------  -------    ---------  ----------------
