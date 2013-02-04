@@ -19,9 +19,18 @@ import System.Hardware.Arduino
 -- we read from the user.
 lcdDemo :: IO ()
 lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
-              lcd <- registerLCD Hitachi44780
+              lcd <- registerLCD hitachi
               go lcd
-  where go lcd = repl
+  where -- Connections:                  ARDUINO      Hitachi    Description
+        -------------------------------  -------   ------------ ----------------
+        hitachi = Hitachi44780 { lcdRS   = pin 2   --    4       Register-select
+                               , lcdEN   = pin 3   --    6       Enable
+                               , lcdD4   = pin 4   --   11       Data 4
+                               , lcdD5   = pin 5   --   12       Data 5
+                               , lcdD6   = pin 6   --   13       Data 6
+                               , lcdD7   = pin 7   --   14       Data 7
+                               }
+        go lcd = repl
          where repl = do liftIO $ putStr "Message> "
                          m <- liftIO getLine
                          case m of

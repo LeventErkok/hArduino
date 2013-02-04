@@ -126,8 +126,16 @@ data PinData = PinData {
 newtype LCD = LCD Int
             deriving (Eq, Ord)
 
--- | Known LCD controllers
-data LCDController = Hitachi44780  -- ^ Hitachi LCD controller: See: <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller>
+-- | Hitachi LCD controller: See: <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller>.
+-- We model only the 4-bit variant, with RS and EN lines only. (The most common Arduino usage.)
+data LCDController = Hitachi44780 {
+                       lcdRS   :: Pin  -- ^ Hitachi pin  4: Register-select
+                     , lcdEN   :: Pin  -- ^ Hitachi pin  6: Enable
+                     , lcdD4   :: Pin  -- ^ Hitachi pin 11: Data line 4
+                     , lcdD5   :: Pin  -- ^ Hitachi pin 12: Data line 5
+                     , lcdD6   :: Pin  -- ^ Hitachi pin 13: Data line 6
+                     , lcdD7   :: Pin  -- ^ Hitachi pin 14: Data line 7
+                     }
 
 -- | State of the board
 data BoardState = BoardState {
