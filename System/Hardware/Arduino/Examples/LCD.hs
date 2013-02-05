@@ -63,7 +63,7 @@ hitachi = Hitachi44780 { lcdRS   = pin 12  --     4      Register-select
 -- | Access the LCD connected to Arduino, making it show messages
 -- we read from the user.
 lcdDemo :: IO ()
-lcdDemo = withArduino True "/dev/cu.usbmodemfd131" $ do
+lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
               lcd <- registerLCD hitachi
               liftIO $ putStrLn "Hitachi controller demo.. Type :q to quit."
               let repl = do liftIO $ putStr "Message> "

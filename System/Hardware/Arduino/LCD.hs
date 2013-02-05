@@ -18,7 +18,7 @@ module System.Hardware.Arduino.LCD(registerLCD, LCDDisplayProperties(..), setLCD
 
 import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad.State (gets, liftIO)
-import Data.Bits           (testBit, (.|.), shiftL, shiftR, (.&.))
+import Data.Bits           (testBit, (.|.), (.&.))
 import Data.Char           (ord)
 import Data.Word           (Word8)
 
@@ -26,6 +26,8 @@ import qualified Data.Map as M
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Firmata
+
+import qualified System.Hardware.Arduino.Utils as U
 
 ---------------------------------------------------------------------------------------
 -- High level interface, exposed to the user
@@ -45,8 +47,9 @@ registerLCD controller = do
 -- | Write a string on an LCD
 writeLCD :: LCD -> String -> Arduino ()
 writeLCD lcd m = do
+   debug $ "Writing " ++ show m ++ " to LCD"
    c <- getController lcd
-   let cvt ch = fromIntegral (ord ch) .|. 0xFF
+   let cvt ch = fromIntegral (ord ch) .&. 0xFF
    mapM_ (sendData c . cvt) m
 
 ---------------------------------------------------------------------------------------
@@ -98,6 +101,7 @@ data LCDDisplayProperties = LCD_DISPLAYON  -- ^ Turn the display on
                           | LCD_CURSOROFF  -- ^ Turn the cursor off
                           | LCD_BLINKON    -- ^ Start blinking the cursor
                           | LCD_BLINKOFF   -- ^ Stop blinking the cursor
+                          deriving Show
 
 getPropVal :: Word8 -> [LCDDisplayProperties] -> Word8
 getPropVal = foldr ((.|.) . get)
@@ -112,6 +116,7 @@ getPropVal = foldr ((.|.) . get)
 -- page 46; figure 24.
 initLCD :: LCD -> LCDController -> Arduino ()
 initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
+    debug "Starting the LCD initialization sequence"
     mapM_ (`setPinMode` OUTPUT) [lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7]
     -- Wait for 50ms, data-sheet says at least 40ms for 2.7V version, so be safe
     delay 50
@@ -126,6 +131,7 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
 -- | Set display properties
 setLCDProperties :: LCD -> [LCDDisplayProperties] -> Arduino ()
 setLCDProperties lcd props = do
+  debug $ "Setting LCD properties: " ++ show props
   bs <- gets boardState
   (c, displayProps) <- liftIO $ modifyMVar bs $ \bst ->
                           case lcd `M.lookup` lcds bst of
@@ -145,6 +151,7 @@ getController lcd = do
 -- | Clear the LCD
 clearLCD :: LCD -> Arduino ()
 clearLCD lcd = do
+   debug "Sending clearLCD"
    c <- getController lcd
    sendCmd c LCD_CLEARDISPLAY
    delay 2 -- give some time to make sure LCD is really cleared
@@ -155,15 +162,14 @@ sendCmd c = transmit False c . getCmdVal c
 
 -- | Send 4-bit data to the LCD controller
 sendData :: LCDController -> Word8 -> Arduino ()
-sendData lcd n = transmit True lcd n'
-  where n' = (lo `shiftL` 4) .|. (hi `shiftR` 4)
-        lo = n .&. 0x0F
-        hi = n .&. 0xF0
+sendData lcd n = do debug $ "Transmitting LCD data: " ++ U.showByte n
+                    transmit True lcd n
 
 -- | By controlling the enable-pin, indicate to the controller that
 -- the data is ready for it to process.
 pulseEnable :: LCDController -> Arduino ()
 pulseEnable Hitachi44780{lcdEN} = do
+  debug "Sending LCD pulseEnable"
   digitalWrite lcdEN False
   delay 1
   digitalWrite lcdEN True
