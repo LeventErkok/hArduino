@@ -18,7 +18,7 @@ module System.Hardware.Arduino.LCD(registerLCD, LCDDisplayProperties(..), setLCD
 
 import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad.State (gets, liftIO)
-import Data.Bits           (testBit, (.|.))
+import Data.Bits           (testBit, (.|.), shiftL, shiftR, (.&.))
 import Data.Char           (ord)
 import Data.Word           (Word8)
 
@@ -84,8 +84,8 @@ getCmdVal Hitachi44780{lcdRows, dotMode5x10} = get
           | dotMode5x10 = 0x04 :: Word8
           | True        = 0x00 :: Word8
         displayFunction = multiLine .|. dotMode
-        get LCD_INITIALIZE         = 0x03
-        get LCD_INITIALIZE_END     = 0x02
+        get LCD_INITIALIZE         = 0x33
+        get LCD_INITIALIZE_END     = 0x32
         get LCD_FUNCTIONSET        = 0x20 .|. displayFunction
         get (LCD_DISPLAYCONTROL w) = 0x08 .|. w
         get LCD_CLEARDISPLAY       = 0x01
@@ -115,8 +115,8 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     mapM_ (`setPinMode` OUTPUT) [lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7]
     -- Wait for 50ms, data-sheet says at least 40ms for 2.7V version, so be safe
     delay 50
-    -- According to the flow-chart on that page we need to send 0x3 three times, with proper delay
-    sequence_ $ concat $ replicate 3 [sendCmd c LCD_INITIALIZE, delay 1]
+    sendCmd c LCD_INITIALIZE
+    delay 5
     sendCmd c LCD_INITIALIZE_END
     sendCmd c LCD_FUNCTIONSET
     setLCDProperties lcd [LCD_DISPLAYON, LCD_CURSOROFF, LCD_BLINKOFF]
@@ -155,7 +155,10 @@ sendCmd c = transmit False c . getCmdVal c
 
 -- | Send 4-bit data to the LCD controller
 sendData :: LCDController -> Word8 -> Arduino ()
-sendData = transmit True
+sendData lcd n = transmit True lcd n'
+  where n' = (lo `shiftL` 4) .|. (hi `shiftR` 4)
+        lo = n .&. 0x0F
+        hi = n .&. 0xF0
 
 -- | By controlling the enable-pin, indicate to the controller that
 -- the data is ready for it to process.
@@ -175,14 +178,14 @@ transmit mode c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} val = do
   digitalWrite lcdEN False
   let [b7, b6, b5, b4, b3, b2, b1, b0] = [val `testBit` i | i <- [7, 6 .. 0]]
   -- Send down the first 4 bits
-  digitalWrite lcdD4 b0
-  digitalWrite lcdD5 b1
-  digitalWrite lcdD6 b2
-  digitalWrite lcdD7 b3
-  -- Signal data sent
-  pulseEnable c
-  -- Send down the second 4 bits
   digitalWrite lcdD4 b4
   digitalWrite lcdD5 b5
   digitalWrite lcdD6 b6
   digitalWrite lcdD7 b7
+  pulseEnable c
+  -- Send down the second 4 bits
+  digitalWrite lcdD4 b0
+  digitalWrite lcdD5 b1
+  digitalWrite lcdD6 b2
+  digitalWrite lcdD7 b3
+  pulseEnable c
