@@ -205,7 +205,7 @@ computePortData curPin newValue = do
   let curPort  = pinPort curPin
   let curIndex = pinPortIndex curPin
   bs <- gets boardState
-  liftIO $ withMVar bs $ \bst -> do
+  liftIO $ modifyMVar bs $ \bst -> do
      let values = [(pinPortIndex p, pinValue pd) | (p, pd) <- M.assocs (pinStates bst), curPort == pinPort p, pinMode pd `elem` [INPUT, OUTPUT]]
          getVal i
            | i == curIndex                             = newValue
@@ -214,7 +214,8 @@ computePortData curPin newValue = do
          [b0, b1, b2, b3, b4, b5, b6, b7] = map getVal [0 .. 7]
          lsb = foldr (\(i, b) m -> if b then m `setBit` i     else m) 0 (zip [0..] [b0, b1, b2, b3, b4, b5, b6])
          msb = foldr (\(i, b) m -> if b then m `setBit` (i-7) else m) 0 (zip [7..] [b7])
-     return (lsb, msb)
+         bst' = bst{pinStates = M.insert curPin PinData{pinMode = OUTPUT, pinValue = Just (Left newValue)}(pinStates bst)}
+     return (bst', (lsb, msb))
 
 -- | Keep track of listeners on a digital message
 digitalWakeUp :: MVar () -> Arduino ()
