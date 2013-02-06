@@ -64,13 +64,13 @@ hitachi = Hitachi44780 { lcdRS   = pin 12  --     4      Register-select
 -- we read from the user.
 lcdDemo :: IO ()
 lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
-              lcd <- registerLCD hitachi
+              lcd <- lcdRegister hitachi
               liftIO $ putStrLn "Hitachi controller demo.. Type :q to quit."
               let repl = do liftIO $ putStr "Message> "
                             m <- liftIO getLine
                             case m of
                              ":q" -> return ()
-                             _    -> do clearLCD lcd
-                                        writeLCD lcd m
+                             _    -> do lcdClear lcd
+                                        lcdWrite lcd m
                                         repl
               repl

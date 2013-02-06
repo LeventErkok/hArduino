@@ -36,8 +36,21 @@ module System.Hardware.Arduino (
   , setAnalogSamplingInterval
   -- *** Reading analog values
   , analogRead
-  -- * Controlling LCDs (Liquid Crystal Displays)
-  , LCDController(..), LCDDisplayProperties(..), registerLCD, setLCDProperties, clearLCD, writeLCD
+  -- * Controlling LCDs
+  -- ** LCD types and registration
+  , LCDController(..), lcdRegister
+  -- ** Writing text on the LCD
+  , lcdClear, lcdWrite
+  -- ** Moving the cursor
+  , lcdHome, lcdSetCursor
+  -- ** Scrolling
+  , lcdAutoScrollOff, lcdAutoScrollOn
+  , lcdScrollDisplayLeft, lcdScrollDisplayRight
+  -- ** Controlling LCD display properties
+  , lcdLeftToRight, lcdRightToLeft
+  , lcdDisplayOff, lcdDisplayOn
+  , lcdCursorOn, lcdCursorOff
+  , lcdNoBlink, lcdBlink
   -- * Misc utilities
   , delay
  )

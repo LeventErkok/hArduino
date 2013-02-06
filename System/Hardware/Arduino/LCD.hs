@@ -14,12 +14,22 @@
 -------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
-module System.Hardware.Arduino.LCD(registerLCD, LCDDisplayProperties(..), setLCDProperties, clearLCD, writeLCD)  where
+module System.Hardware.Arduino.LCD(
+             lcdRegister
+           , lcdClear, lcdWrite
+           , lcdHome, lcdSetCursor
+           , lcdDisplayOff, lcdDisplayOn
+           , lcdCursorOn, lcdCursorOff , lcdNoBlink, lcdBlink
+           , lcdLeftToRight, lcdRightToLeft
+           , lcdScrollDisplayLeft, lcdScrollDisplayRight
+           , lcdAutoScrollOff, lcdAutoScrollOn
+        )  where
 
 import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad.State (gets, liftIO)
 import Data.Bits           (testBit, (.|.), (.&.))
 import Data.Char           (ord)
+import Data.Maybe          (fromMaybe)
 import Data.Word           (Word8)
 
 import qualified Data.Map as M
@@ -28,29 +38,6 @@ import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Firmata
 
 import qualified System.Hardware.Arduino.Utils as U
-
----------------------------------------------------------------------------------------
--- High level interface, exposed to the user
----------------------------------------------------------------------------------------
-
--- | Register an LCD controller
-registerLCD :: LCDController -> Arduino LCD
-registerLCD controller = do
-  bs <- gets boardState
-  lcd <- liftIO $ modifyMVar bs $ \bst -> do
-                    let n = M.size $ lcds bst
-                    return (bst {lcds = M.insert (LCD n) (0, controller) (lcds bst)}, LCD n)
-  case controller of
-     Hitachi44780{} -> initLCD lcd controller
-  return lcd
-
--- | Write a string on an LCD
-writeLCD :: LCD -> String -> Arduino ()
-writeLCD lcd m = do
-   debug $ "Writing " ++ show m ++ " to LCD"
-   c <- getController lcd
-   let cvt ch = fromIntegral (ord ch) .&. 0xFF
-   mapM_ (sendData c . cvt) m
 
 ---------------------------------------------------------------------------------------
 -- Low level interface, not available to the user
@@ -62,7 +49,7 @@ data EntryModes = LCD_ENTRYLEFT
                 | LCD_ENTRYSHIFTINCREMENT
                 | LCD_ENTRYSHIFTDECREMENT
 
--- | Convert entry mode to val.
+-- | Convert entry mode to val
 getModeVal :: EntryModes -> Word8
 getModeVal LCD_ENTRYLEFT           = 0x02
 getModeVal LCD_ENTRYRIGHT          = 0x00
@@ -76,6 +63,8 @@ data Cmd = LCD_INITIALIZE
          | LCD_DISPLAYCONTROL Word8
          | LCD_CLEARDISPLAY
          | LCD_ENTRYMODESET [EntryModes]
+         | LCD_RETURNHOME
+         | LCD_SETDDRAMADDR Word8
 
 -- | Convert a command to a data-word
 getCmdVal :: LCDController -> Cmd -> Word8
@@ -93,6 +82,8 @@ getCmdVal Hitachi44780{lcdRows, dotMode5x10} = get
         get (LCD_DISPLAYCONTROL w) = 0x08 .|. w
         get LCD_CLEARDISPLAY       = 0x01
         get (LCD_ENTRYMODESET ms)  = 0x04 .|. foldr ((.|.) . getModeVal) 0 ms
+        get LCD_RETURNHOME         = 0x02
+        get (LCD_SETDDRAMADDR w)   = 0x80 .|. w
 
 -- | Display properties
 data LCDDisplayProperties = LCD_DISPLAYON  -- ^ Turn the display on
@@ -125,7 +116,7 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     sendCmd c LCD_INITIALIZE_END
     sendCmd c LCD_FUNCTIONSET
     setLCDProperties lcd [LCD_DISPLAYON, LCD_CURSOROFF, LCD_BLINKOFF]
-    clearLCD lcd
+    lcdClear lcd
     sendCmd c (LCD_ENTRYMODESET [LCD_ENTRYLEFT, LCD_ENTRYSHIFTDECREMENT])
 
 -- | Set display properties
@@ -147,14 +138,6 @@ getController lcd = do
   liftIO $ withMVar bs $ \bst -> case lcd `M.lookup` lcds bst of
                                    Nothing     -> error $ "hArduino: Cannot locate " ++ show lcd
                                    Just (_, c) -> return c
-
--- | Clear the LCD
-clearLCD :: LCD -> Arduino ()
-clearLCD lcd = do
-   debug "Sending clearLCD"
-   c <- getController lcd
-   sendCmd c LCD_CLEARDISPLAY
-   delay 2 -- give some time to make sure LCD is really cleared
 
 -- | Send a command to the LCD controller
 sendCmd :: LCDController -> Cmd -> Arduino ()
@@ -189,9 +172,121 @@ transmit mode c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} val = do
   digitalWrite lcdD6 b6
   digitalWrite lcdD7 b7
   pulseEnable c
-  -- Send down the second 4 bits
+  -- Send down the remaining batch
   digitalWrite lcdD4 b0
   digitalWrite lcdD5 b1
   digitalWrite lcdD6 b2
   digitalWrite lcdD7 b3
   pulseEnable c
+
+-- | Helper function to simplify library programming, not exposed to the user.
+withLCD :: LCD -> String -> (LCDController -> Arduino a) -> Arduino a
+withLCD lcd what action = do
+        debug what
+        c <- getController lcd
+        action c
+
+---------------------------------------------------------------------------------------
+-- High level interface, exposed to the user
+---------------------------------------------------------------------------------------
+
+-- | Register an LCD controller
+lcdRegister :: LCDController -> Arduino LCD
+lcdRegister controller = do
+  bs <- gets boardState
+  lcd <- liftIO $ modifyMVar bs $ \bst -> do
+                    let n = M.size $ lcds bst
+                    return (bst {lcds = M.insert (LCD n) (0, controller) (lcds bst)}, LCD n)
+  case controller of
+     Hitachi44780{} -> initLCD lcd controller
+  return lcd
+
+-- | Write a string on the LCD at the current cursor position
+lcdWrite :: LCD -> String -> Arduino ()
+lcdWrite lcd m = withLCD lcd ("Writing " ++ show m ++ " to LCD") $ \c -> mapM_ (sendData c) m'
+   where m' = map (\ch -> fromIntegral (ord ch) .&. 0xFF) m
+
+-- | Clear the LCD
+lcdClear :: LCD -> Arduino ()
+lcdClear lcd = withLCD lcd "Sending clearLCD" $ \c ->
+                 do sendCmd c LCD_CLEARDISPLAY
+                    delay 2 -- give some time to make sure LCD is really cleared
+
+-- | Send the cursor to home position
+lcdHome :: LCD -> Arduino ()
+lcdHome lcd = withLCD lcd "Sending the cursor home" $ \c ->
+                do sendCmd c LCD_RETURNHOME
+                   delay 2
+
+-- | Set the cursor location. The pair of arguments is the new column and row numbers
+-- respectively:
+--
+--   * The first value is the column, the second is the row. (This is counter-intuitive, but
+--     is in line with what the standard Arduino programmers do, so we follow the same convention.)
+--
+--   * Counting starts at 0 (both for column and row no)
+--
+--   * If the new location is out-of-bounds of your LCD, we will put it the cursor to the closest
+--     possible location on the LCD.
+lcdSetCursor :: LCD -> (Int, Int) -> Arduino ()
+lcdSetCursor lcd (givenCol, givenRow) = withLCD lcd ("Sending the cursor to Row: " ++ show givenRow ++ " Col: " ++ show givenCol) set
+  where set c@Hitachi44780{lcdRows, lcdCols} = sendCmd c (LCD_SETDDRAMADDR offset)
+              where align :: Int -> Int -> Word8
+                    align i m
+                      | i < 0  = 0
+                      | i >= m = fromIntegral $ m-1
+                      | True   = fromIntegral i
+                    col = align givenCol lcdCols
+                    row = align givenRow lcdRows
+                    -- The magic row-offsets come from various web sources
+                    -- I don't follow the logic in these numbers, but it seems to work
+                    rowOffsets = [(0, 0), (1, 0x40), (2, 0x14), (3, 0x54)]
+                    offset = col + fromMaybe 0x54 (row `lookup` rowOffsets)
+
+-- | Turn the display off
+lcdDisplayOff :: LCD -> Arduino ()
+lcdDisplayOff = error "TBD: needs display control"
+
+-- | Turn the display on
+lcdDisplayOn :: LCD -> Arduino ()
+lcdDisplayOn = error "TBD: needs display control"
+
+-- | Do not blink the cursor
+lcdNoBlink :: LCD -> Arduino ()
+lcdNoBlink = error "TBD: needs display control"
+
+-- | Blink the cursor
+lcdBlink :: LCD -> Arduino ()
+lcdBlink = error "TBD: needs display control"
+
+-- | Show the cursor
+lcdCursorOn :: LCD -> Arduino ()
+lcdCursorOn = error "TBD: needs display control"
+
+-- | Hide the cursor
+lcdCursorOff :: LCD -> Arduino ()
+lcdCursorOff = error "TBD: needs display control"
+
+-- | Scroll the display to the left by 1 character
+lcdScrollDisplayLeft :: LCD -> Arduino ()
+lcdScrollDisplayLeft = error "TBD"
+
+-- | Scroll the display to the right by 1 character
+lcdScrollDisplayRight :: LCD -> Arduino ()
+lcdScrollDisplayRight = error "TBD"
+
+-- | Set writing direction: Left to Right
+lcdLeftToRight :: LCD -> Arduino ()
+lcdLeftToRight = error "TBD: needs display mode"
+
+-- | Set writing direction: Right to Left
+lcdRightToLeft :: LCD -> Arduino ()
+lcdRightToLeft = error "TBD: needs display mode"
+
+-- | Turn on auto-scrolling
+lcdAutoScrollOn :: LCD -> Arduino ()
+lcdAutoScrollOn = error "TBD: needs display mode"
+
+-- | Turn off auto-scrolling
+lcdAutoScrollOff :: LCD -> Arduino ()
+lcdAutoScrollOff = error "TBD: needs display mode"
