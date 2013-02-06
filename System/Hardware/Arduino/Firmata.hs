@@ -54,8 +54,10 @@ digitalWrite p v = do
                                        , "For digitalWrite, it must be set to: " ++ show OUTPUT
                                        , "via a proper call to setPinMode"
                                        ]
-   (lsb, msb) <- computePortData p v
-   send $ DigitalPortWrite (pinPort p) lsb msb
+   case pinValue pd of
+     Just (Left b) | b == v -> return () -- no change, nothing to do
+     _                      -> do (lsb, msb) <- computePortData p v
+                                  send $ DigitalPortWrite (pinPort p) lsb msb
 
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
