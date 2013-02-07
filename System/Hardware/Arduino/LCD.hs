@@ -102,8 +102,8 @@ data LCDDisplayProperties = LCD_DISPLAYON  -- ^ Turn the display on
                           | LCD_BLINKOFF   -- ^ Stop blinking the cursor
                           deriving Show
 
-getPropVal :: Word8 -> [LCDDisplayProperties] -> Word8
-getPropVal = foldr ((.|.) . get)
+updatePropVal :: LCDData -> [LCDDisplayProperties] -> LCDData
+updatePropVal ld@LCDData{lcdDisplayControl} props = ld{lcdDisplayControl = foldr ((.|.) . get) lcdDisplayControl props}
   where get LCD_DISPLAYON  = 0x04
         get LCD_DISPLAYOFF = 0x00
         get LCD_CURSORON   = 0x02
@@ -132,20 +132,20 @@ setLCDProperties :: LCD -> [LCDDisplayProperties] -> Arduino ()
 setLCDProperties lcd props = do
   debug $ "Setting LCD properties: " ++ show props
   bs <- gets boardState
-  (c, displayProps) <- liftIO $ modifyMVar bs $ \bst ->
-                          case lcd `M.lookup` lcds bst of
-                            Nothing            -> error $ "hArduino: Cannot locate " ++ show lcd
-                            Just (curProps, c) -> do let newProps = getPropVal curProps props
-                                                     return (bst {lcds = M.insert lcd (newProps, c) (lcds bst)}, (c, newProps))
-  sendCmd c (LCD_DISPLAYCONTROL displayProps)
+  ld <- liftIO $ modifyMVar bs $ \bst ->
+                    case lcd `M.lookup` lcds bst of
+                      Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                      Just ld -> do let ld' = updatePropVal ld props
+                                    return (bst{lcds = M.insert lcd (updatePropVal ld props) (lcds bst)}, ld')
+  sendCmd (lcdController ld) (LCD_DISPLAYCONTROL (lcdDisplayControl ld))
 
 -- | Get the controller associated with the LCD
 getController :: LCD -> Arduino LCDController
 getController lcd = do
   bs <- gets boardState
   liftIO $ withMVar bs $ \bst -> case lcd `M.lookup` lcds bst of
-                                   Nothing     -> error $ "hArduino: Cannot locate " ++ show lcd
-                                   Just (_, c) -> return c
+                                   Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                                   Just ld -> return $ lcdController ld
 
 -- | Send a command to the LCD controller
 sendCmd :: LCDController -> Cmd -> Arduino ()
@@ -204,7 +204,11 @@ lcdRegister controller = do
   bs <- gets boardState
   lcd <- liftIO $ modifyMVar bs $ \bst -> do
                     let n = M.size $ lcds bst
-                    return (bst {lcds = M.insert (LCD n) (0, controller) (lcds bst)}, LCD n)
+                        ld = LCDData { lcdDisplayMode    = 0
+                                     , lcdDisplayControl = 0
+                                     , lcdController     = controller
+                                     }
+                    return (bst {lcds = M.insert (LCD n) ld (lcds bst)}, LCD n)
   case controller of
      Hitachi44780{} -> initLCD lcd controller
   return lcd

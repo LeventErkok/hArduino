@@ -143,16 +143,20 @@ data LCDController = Hitachi44780 {
                      deriving Show
 
 -- | State of the LCD, a mere 8-bit word for the Hitachi
-type LCDStatus = Word8
+data LCDData = LCDData {
+                  lcdDisplayMode    :: Word8         -- ^ Display mode (left/right/scrolling etc.)
+                , lcdDisplayControl :: Word8         -- ^ Display control (blink on/off, display on/off etc.)
+                , lcdController     :: LCDController -- ^ Actual controller
+                }
 
 -- | State of the board
 data BoardState = BoardState {
-                    boardCapabilities    :: BoardCapabilities                    -- ^ Capabilities of the board
-                  , analogReportingPins  :: S.Set Pin                            -- ^ Which analog pins are reporting
-                  , digitalReportingPins :: S.Set Pin                            -- ^ Which digital pins are reporting
-                  , pinStates            :: M.Map Pin PinData                    -- ^ For-each pin, store its data
-                  , digitalWakeUpQueue   :: [MVar ()]                            -- ^ Semaphore list to wake-up upon receiving a digital message
-                  , lcds                 :: M.Map LCD (LCDStatus, LCDController) -- ^ LCD's attached to the board
+                    boardCapabilities    :: BoardCapabilities  -- ^ Capabilities of the board
+                  , analogReportingPins  :: S.Set Pin          -- ^ Which analog pins are reporting
+                  , digitalReportingPins :: S.Set Pin          -- ^ Which digital pins are reporting
+                  , pinStates            :: M.Map Pin PinData  -- ^ For-each pin, store its data
+                  , digitalWakeUpQueue   :: [MVar ()]          -- ^ Semaphore list to wake-up upon receiving a digital message
+                  , lcds                 :: M.Map LCD LCDData  -- ^ LCD's attached to the board
                   }
 
 -- | State of the computation
