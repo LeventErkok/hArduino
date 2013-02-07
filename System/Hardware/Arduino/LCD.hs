@@ -1,4 +1,4 @@
--------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
 -- |
 -- Module      :  System.Hardware.Arduino.LCD
 -- Copyright   :  (c) Levent Erkok
@@ -13,7 +13,7 @@
 -- The Hitachi44780 data sheet is at: <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>
 --
 -- For an example program using this library, see "System.Hardware.Arduino.SamplePrograms.LCD".
--------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.LCD(
@@ -28,14 +28,15 @@ module System.Hardware.Arduino.LCD(
   , lcdScrollDisplayLeft, lcdScrollDisplayRight
   -- * Display properties
   , lcdLeftToRight, lcdRightToLeft
-  , lcdDisplayOff, lcdDisplayOn
+  , lcdBlinkOn, lcdBlinkOff
   , lcdCursorOn, lcdCursorOff
-  , lcdNoBlink, lcdBlink
+  , lcdDisplayOff, lcdDisplayOn
   )  where
 
 import Control.Concurrent  (modifyMVar, withMVar)
+import Control.Monad       (when)
 import Control.Monad.State (gets, liftIO)
-import Data.Bits           (testBit, (.|.), (.&.))
+import Data.Bits           (testBit, (.|.), (.&.), setBit, clearBit)
 import Data.Char           (ord)
 import Data.Maybe          (fromMaybe)
 import Data.Word           (Word8)
@@ -51,28 +52,16 @@ import qualified System.Hardware.Arduino.Utils as U
 -- Low level interface, not available to the user
 ---------------------------------------------------------------------------------------
 
--- | Entry modes
-data EntryModes = LCD_ENTRYLEFT
-                | LCD_ENTRYRIGHT
-                | LCD_ENTRYSHIFTINCREMENT
-                | LCD_ENTRYSHIFTDECREMENT
-
--- | Convert entry mode to val
-getModeVal :: EntryModes -> Word8
-getModeVal LCD_ENTRYLEFT           = 0x02
-getModeVal LCD_ENTRYRIGHT          = 0x00
-getModeVal LCD_ENTRYSHIFTINCREMENT = 0x01
-getModeVal LCD_ENTRYSHIFTDECREMENT = 0x00
-
 -- | Commands understood by Hitachi
 data Cmd = LCD_INITIALIZE
          | LCD_INITIALIZE_END
          | LCD_FUNCTIONSET
          | LCD_DISPLAYCONTROL Word8
          | LCD_CLEARDISPLAY
-         | LCD_ENTRYMODESET [EntryModes]
+         | LCD_ENTRYMODESET Word8
          | LCD_RETURNHOME
          | LCD_SETDDRAMADDR Word8
+         | LCD_CURSORSHIFT Word8
 
 -- | Convert a command to a data-word
 getCmdVal :: LCDController -> Cmd -> Word8
@@ -89,30 +78,27 @@ getCmdVal Hitachi44780{lcdRows, dotMode5x10} = get
         get LCD_FUNCTIONSET        = 0x20 .|. displayFunction
         get (LCD_DISPLAYCONTROL w) = 0x08 .|. w
         get LCD_CLEARDISPLAY       = 0x01
-        get (LCD_ENTRYMODESET ms)  = 0x04 .|. foldr ((.|.) . getModeVal) 0 ms
+        get (LCD_ENTRYMODESET w)   = 0x04 .|. w
         get LCD_RETURNHOME         = 0x02
         get (LCD_SETDDRAMADDR w)   = 0x80 .|. w
-
--- | Display properties
-data LCDDisplayProperties = LCD_DISPLAYON  -- ^ Turn the display on
-                          | LCD_DISPLAYOFF -- ^ Turn the display off
-                          | LCD_CURSORON   -- ^ Turn the cursor on
-                          | LCD_CURSOROFF  -- ^ Turn the cursor off
-                          | LCD_BLINKON    -- ^ Start blinking the cursor
-                          | LCD_BLINKOFF   -- ^ Stop blinking the cursor
-                          deriving Show
-
-updatePropVal :: LCDData -> [LCDDisplayProperties] -> LCDData
-updatePropVal ld@LCDData{lcdDisplayControl} props = ld{lcdDisplayControl = foldr ((.|.) . get) lcdDisplayControl props}
-  where get LCD_DISPLAYON  = 0x04
-        get LCD_DISPLAYOFF = 0x00
-        get LCD_CURSORON   = 0x02
-        get LCD_CURSOROFF  = 0x00
-        get LCD_BLINKON    = 0x01
-        get LCD_BLINKOFF   = 0x00
+        get (LCD_CURSORSHIFT w)    = 0x10 .|. 0x08 .|. w   -- NB. LCD_DISPLAYMOVE (0x08) hard coded here
 
 -- | Initialize the LCD. Follows the data sheet <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>,
--- page 46; figure 24.
+-- page 46; figure 24. When initialization is complete, we will:
+--
+--   * Set display ON (Use 'lcdDisplayOn'/'lcdDisplayOff' to change.)
+--
+--   * Set cursor OFF (Use 'lcdCursorOn'/'lcdCursorOff' to change.)
+--
+--   * Set blink OFF  (Use ' lcdBlinkOn'/'lcdBlinkOff' to change.)
+--
+--   * Clear display (Use 'lcdClear' to clear, 'lcdWrite' to send text.)
+--
+--   * Set entry mode left to write (Use 'lcdLeftToRight'/'lcdRightToLeft' to control.)
+--
+--   * Set autoscrolling OFF (Use 'lcdAutoScrollOff'/'lcdAutoScrollOn' to control.)
+--
+--   * Put the cursor into home position (Use 'lcdSetCursor' to move around.)
 initLCD :: LCD -> LCDController -> Arduino ()
 initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     debug "Starting the LCD initialization sequence"
@@ -123,21 +109,12 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     delay 5
     sendCmd c LCD_INITIALIZE_END
     sendCmd c LCD_FUNCTIONSET
-    setLCDProperties lcd [LCD_DISPLAYON, LCD_CURSOROFF, LCD_BLINKOFF]
+    lcdDisplayOn lcd
+    lcdCursorOff lcd
+    lcdBlinkOff lcd
     lcdClear lcd
-    sendCmd c (LCD_ENTRYMODESET [LCD_ENTRYLEFT, LCD_ENTRYSHIFTDECREMENT])
-
--- | Set display properties
-setLCDProperties :: LCD -> [LCDDisplayProperties] -> Arduino ()
-setLCDProperties lcd props = do
-  debug $ "Setting LCD properties: " ++ show props
-  bs <- gets boardState
-  ld <- liftIO $ modifyMVar bs $ \bst ->
-                    case lcd `M.lookup` lcds bst of
-                      Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
-                      Just ld -> do let ld' = updatePropVal ld props
-                                    return (bst{lcds = M.insert lcd (updatePropVal ld props) (lcds bst)}, ld')
-  sendCmd (lcdController ld) (LCD_DISPLAYCONTROL (lcdDisplayControl ld))
+    lcdLeftToRight lcd
+    lcdAutoScrollOff lcd
 
 -- | Get the controller associated with the LCD
 getController :: LCD -> Arduino LCDController
@@ -255,50 +232,102 @@ lcdSetCursor lcd (givenCol, givenRow) = withLCD lcd ("Sending the cursor to Row:
                     rowOffsets = [(0, 0), (1, 0x40), (2, 0x14), (3, 0x54)]
                     offset = col + fromMaybe 0x54 (row `lookup` rowOffsets)
 
--- | Turn the display off
-lcdDisplayOff :: LCD -> Arduino ()
-lcdDisplayOff = error "TBD: needs display control"
-
--- | Turn the display on
-lcdDisplayOn :: LCD -> Arduino ()
-lcdDisplayOn = error "TBD: needs display control"
-
--- | Do not blink the cursor
-lcdNoBlink :: LCD -> Arduino ()
-lcdNoBlink = error "TBD: needs display control"
-
--- | Blink the cursor
-lcdBlink :: LCD -> Arduino ()
-lcdBlink = error "TBD: needs display control"
-
--- | Show the cursor
-lcdCursorOn :: LCD -> Arduino ()
-lcdCursorOn = error "TBD: needs display control"
-
--- | Hide the cursor
-lcdCursorOff :: LCD -> Arduino ()
-lcdCursorOff = error "TBD: needs display control"
-
 -- | Scroll the display to the left by 1 character
 lcdScrollDisplayLeft :: LCD -> Arduino ()
-lcdScrollDisplayLeft = error "TBD"
+lcdScrollDisplayLeft lcd = withLCD lcd "Scrolling display to the left by 1" $ \c -> sendCmd c (LCD_CURSORSHIFT lcdMoveLeft)
+  where lcdMoveLeft = 0x00
 
 -- | Scroll the display to the right by 1 character
 lcdScrollDisplayRight :: LCD -> Arduino ()
-lcdScrollDisplayRight = error "TBD"
+lcdScrollDisplayRight lcd = withLCD lcd "Scrolling display to the right by 1" $ \c -> sendCmd c (LCD_CURSORSHIFT lcdMoveRight)
+  where lcdMoveRight = 0x04
+
+-- | Display characteristics helper, set the new control/mode and send
+-- appropriate commands if anything changed
+updateDisplayData :: String -> (Word8 -> Word8, Word8 -> Word8) -> LCD -> Arduino ()
+updateDisplayData what (f, g) lcd = do
+   debug what
+   bs <- gets boardState
+   (  LCDData {lcdDisplayControl = oldC, lcdDisplayMode = oldM}
+    , LCDData {lcdDisplayControl = newC, lcdDisplayMode = newM, lcdController = c})
+        <- liftIO $ modifyMVar bs $ \bst ->
+                       case lcd `M.lookup` lcds bst of
+                         Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                         Just ld@LCDData{lcdDisplayControl, lcdDisplayMode}
+                            -> do let ld' = ld { lcdDisplayControl = f lcdDisplayControl
+                                               , lcdDisplayMode    = g lcdDisplayMode
+                                               }
+                                  return (bst{lcds = M.insert lcd ld' (lcds bst)}, (ld, ld'))
+   when (oldC /= newC) $ sendCmd c (LCD_DISPLAYCONTROL newC)
+   when (oldM /= newM) $ sendCmd c (LCD_ENTRYMODESET   newM)
+
+-- | Update the display control word
+updateDisplayControl :: String -> (Word8 -> Word8) -> LCD -> Arduino ()
+updateDisplayControl what f = updateDisplayData what (f, id)
+
+-- | Update the display mode word
+updateDisplayMode :: String -> (Word8 -> Word8) -> LCD -> Arduino ()
+updateDisplayMode what g = updateDisplayData what (id, g)
+
+-- | Various control masks for the Hitachi44780
+data Hitachi44780Mask = LCD_BLINKON              -- ^ bit @0@ Controls whether cursor blinks
+                      | LCD_CURSORON             -- ^ bit @1@ Controls whether cursor is on
+                      | LCD_DISPLAYON            -- ^ bit @2@ Controls whether display is on
+                      | LCD_ENTRYSHIFTINCREMENT  -- ^ bit @0@ Controls left/right scroll
+                      | LCD_ENTRYLEFT            -- ^ bit @1@ Controls left/right entry mode
+
+-- | Convert the mask value to the bit no
+maskBit :: Hitachi44780Mask -> Int
+maskBit LCD_BLINKON             = 0
+maskBit LCD_CURSORON            = 1
+maskBit LCD_DISPLAYON           = 2
+maskBit LCD_ENTRYSHIFTINCREMENT = 0
+maskBit LCD_ENTRYLEFT           = 1
+
+-- | Clear by the mask
+clearMask :: Hitachi44780Mask -> Word8 -> Word8
+clearMask m w = w `clearBit` maskBit m
+
+-- | Set by the mask
+setMask :: Hitachi44780Mask -> Word8 -> Word8
+setMask m w = w `setBit` maskBit m
+
+-- | Do not blink the cursor
+lcdBlinkOff :: LCD -> Arduino ()
+lcdBlinkOff = updateDisplayControl "Turning blinking off" (clearMask LCD_BLINKON)
+
+-- | Blink the cursor
+lcdBlinkOn :: LCD -> Arduino ()
+lcdBlinkOn = updateDisplayControl "Turning blinking on" (setMask LCD_BLINKON)
+
+-- | Hide the cursor
+lcdCursorOff :: LCD -> Arduino ()
+lcdCursorOff = updateDisplayControl "Not showing the cursor" (clearMask LCD_CURSORON)
+
+-- | Show the cursor
+lcdCursorOn :: LCD -> Arduino ()
+lcdCursorOn = updateDisplayControl "Showing the cursor" (setMask LCD_CURSORON)
+
+-- | Turn the display off
+lcdDisplayOff :: LCD -> Arduino ()
+lcdDisplayOff = updateDisplayControl "Turning display off" (clearMask LCD_DISPLAYON)
+
+-- | Turn the display on
+lcdDisplayOn :: LCD -> Arduino ()
+lcdDisplayOn = updateDisplayControl "Turning display on" (setMask LCD_DISPLAYON)
 
 -- | Set writing direction: Left to Right
 lcdLeftToRight :: LCD -> Arduino ()
-lcdLeftToRight = error "TBD: needs display mode"
+lcdLeftToRight = updateDisplayMode "Setting left-to-right entry mode" (setMask LCD_ENTRYLEFT)
 
 -- | Set writing direction: Right to Left
 lcdRightToLeft :: LCD -> Arduino ()
-lcdRightToLeft = error "TBD: needs display mode"
+lcdRightToLeft = updateDisplayMode "Setting right-to-left entry mode" (clearMask LCD_ENTRYLEFT)
 
 -- | Turn on auto-scrolling
 lcdAutoScrollOn :: LCD -> Arduino ()
-lcdAutoScrollOn = error "TBD: needs display mode"
+lcdAutoScrollOn = updateDisplayMode "Setting auto-scroll ON" (setMask LCD_ENTRYSHIFTINCREMENT)
 
 -- | Turn off auto-scrolling
 lcdAutoScrollOff :: LCD -> Arduino ()
-lcdAutoScrollOff = error "TBD: needs display mode"
+lcdAutoScrollOff = updateDisplayMode "Setting auto-scroll OFF" (clearMask LCD_ENTRYSHIFTINCREMENT)
