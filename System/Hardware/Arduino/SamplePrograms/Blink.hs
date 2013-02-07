@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.Examples.Blink
+-- Module      :  System.Hardware.Arduino.SamplePrograms.Blink
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- The /hello world/ of the arduino world, blinking the led.
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Examples.Blink where
+module System.Hardware.Arduino.SamplePrograms.Blink where
 
 import Control.Monad           (forever)
 import Control.Monad.Trans     (liftIO)

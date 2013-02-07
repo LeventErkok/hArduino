@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.Examples.Switch
+-- Module      :  System.Hardware.Arduino.SamplePrograms.Switch
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -11,7 +11,7 @@
 -- pull-up resistors
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Examples.Switch where
+module System.Hardware.Arduino.SamplePrograms.Switch where
 
 import Control.Monad.Trans (liftIO)
 import System.IO           (hSetBuffering, BufferMode(NoBuffering), stdout)

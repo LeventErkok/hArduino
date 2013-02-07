@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.Examples.Counter
+-- Module      :  System.Hardware.Arduino.SamplePrograms.Counter
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,14 +10,14 @@
 -- different Haskell threads
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Examples.Counter where
+module System.Hardware.Arduino.SamplePrograms.Counter where
 
 import Control.Monad.Trans (liftIO)
 
 import System.Hardware.Arduino
 
 -- | Two push-button switches, wired up very similar to the set up
--- in "System.Hardware.Arduino.Examples.Switch", one on pin 2 ('bDown'),
+-- in "System.Hardware.Arduino.SamplePrograms.Switch", one on pin 2 ('bDown'),
 -- second on pin 4 ('bUp'); both with explicit resistors.
 --
 -- We will keep a counter, incrementing it by 1 if 'bUp'

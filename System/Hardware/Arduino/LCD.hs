@@ -7,23 +7,31 @@
 -- Stability   :  experimental
 --
 -- LCD (Liquid Crystal Display) parts supported by hArduino. The Haskell code
--- below has partly been coded by following the Arduino LiquidCrystal project
+-- below has partly been implemented following the Arduino LiquidCrystal project
 -- source code: <http://code.google.com/p/arduino/source/browse/trunk/libraries/LiquidCrystal/>
 --
--- The Hitachi44780 data sheet is at: http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf
+-- The Hitachi44780 data sheet is at: <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>
+--
+-- For an example program using this library, see "System.Hardware.Arduino.SamplePrograms.LCD".
 -------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.LCD(
-             lcdRegister
-           , lcdClear, lcdWrite
-           , lcdHome, lcdSetCursor
-           , lcdDisplayOff, lcdDisplayOn
-           , lcdCursorOn, lcdCursorOff , lcdNoBlink, lcdBlink
-           , lcdLeftToRight, lcdRightToLeft
-           , lcdScrollDisplayLeft, lcdScrollDisplayRight
-           , lcdAutoScrollOff, lcdAutoScrollOn
-        )  where
+  -- * LCD types and registration
+  LCDController(..), lcdRegister
+  -- * Writing text on the LCD
+  , lcdClear, lcdWrite
+  -- * Moving the cursor
+  , lcdHome, lcdSetCursor
+  -- * Scrolling
+  , lcdAutoScrollOff, lcdAutoScrollOn
+  , lcdScrollDisplayLeft, lcdScrollDisplayRight
+  -- * Display properties
+  , lcdLeftToRight, lcdRightToLeft
+  , lcdDisplayOff, lcdDisplayOn
+  , lcdCursorOn, lcdCursorOff
+  , lcdNoBlink, lcdBlink
+  )  where
 
 import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad.State (gets, liftIO)

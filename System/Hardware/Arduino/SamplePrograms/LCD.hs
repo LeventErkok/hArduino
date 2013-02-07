@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.Examples.LCD
+-- Module      :  System.Hardware.Arduino.SamplePrograms.LCD
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,11 +9,12 @@
 -- Basic demo of an Hitachi HD44780 LCD
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Examples.LCD where
+module System.Hardware.Arduino.SamplePrograms.LCD where
 
 import Control.Monad.Trans (liftIO)
 
 import System.Hardware.Arduino
+import System.Hardware.Arduino.LCD
 
 -- | Connections for a basic hitachi controller
 -- See <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller> for
@@ -44,7 +45,7 @@ import System.Hardware.Arduino
 --
 --  * [If backlight is needed] LCD pin @16@ to GND via 220ohm resistor
 --
---  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/Examples/Schematics/LCD.png>>
+--  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/LCD.png>>
 hitachi :: LCDController
 -- Connections:                   ARDUINO     Hitachi   Description
 --------------------------------  -------    ---------  ----------------

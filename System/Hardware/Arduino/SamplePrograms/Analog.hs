@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.Examples.Analog
+-- Module      :  System.Hardware.Arduino.SamplePrograms.Analog
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- Reads the value of an analog input, controlled by a 10K potentiometer.
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.Examples.Analog where
+module System.Hardware.Arduino.SamplePrograms.Analog where
 
 import Control.Monad       (when)
 import Control.Monad.Trans (liftIO)

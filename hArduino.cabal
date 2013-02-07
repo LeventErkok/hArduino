@@ -22,7 +22,7 @@ Bug-reports:   http://github.com/LeventErkok/hArduino/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
 Cabal-Version: >= 1.14
-Extra-Source-Files: INSTALL, README, COPYRIGHT, RELEASENOTES
+Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 source-repository head
     type:       git
@@ -37,14 +37,14 @@ Library
                   -- threaddelay is broken on Mac. See: http://hackage.haskell.org/trac/ghc/ticket/7299
                   , process
   Exposed-modules : System.Hardware.Arduino
-                  , System.Hardware.Arduino.Examples.Analog
-                  , System.Hardware.Arduino.Examples.Blink
-                  , System.Hardware.Arduino.Examples.Counter
-                  , System.Hardware.Arduino.Examples.Switch
-                  , System.Hardware.Arduino.Examples.LCD
+                  , System.Hardware.Arduino.LCD
+                  , System.Hardware.Arduino.SamplePrograms.Analog
+                  , System.Hardware.Arduino.SamplePrograms.Blink
+                  , System.Hardware.Arduino.SamplePrograms.Counter
+                  , System.Hardware.Arduino.SamplePrograms.Switch
+                  , System.Hardware.Arduino.SamplePrograms.LCD
   Other-modules   : System.Hardware.Arduino.Comm
                   , System.Hardware.Arduino.Data
                   , System.Hardware.Arduino.Firmata
                   , System.Hardware.Arduino.Protocol
                   , System.Hardware.Arduino.Utils
-                  , System.Hardware.Arduino.LCD
