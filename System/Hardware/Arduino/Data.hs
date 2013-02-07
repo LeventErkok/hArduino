@@ -130,14 +130,14 @@ newtype LCD = LCD Int
 -- We model only the 4-bit variant, with RS and EN lines only. (The most common Arduino usage.)
 -- The data sheet can be seen at: <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>.
 data LCDController = Hitachi44780 {
-                       lcdRS       :: Pin  -- ^ Hitachi pin  4: Register-select
-                     , lcdEN       :: Pin  -- ^ Hitachi pin  6: Enable
-                     , lcdD4       :: Pin  -- ^ Hitachi pin 11: Data line 4
-                     , lcdD5       :: Pin  -- ^ Hitachi pin 12: Data line 5
-                     , lcdD6       :: Pin  -- ^ Hitachi pin 13: Data line 6
-                     , lcdD7       :: Pin  -- ^ Hitachi pin 14: Data line 7
-                     , lcdRows     :: Int  -- ^ Number of rows (typically 1 or 2)
-                     , lcdCols     :: Int  -- ^ Number of cols (typically 16 or 20)
+                       lcdRS       :: Pin  -- ^ Hitachi pin @ 4@: Register-select
+                     , lcdEN       :: Pin  -- ^ Hitachi pin @ 6@: Enable
+                     , lcdD4       :: Pin  -- ^ Hitachi pin @11@: Data line @4@
+                     , lcdD5       :: Pin  -- ^ Hitachi pin @12@: Data line @5@
+                     , lcdD6       :: Pin  -- ^ Hitachi pin @13@: Data line @6@
+                     , lcdD7       :: Pin  -- ^ Hitachi pin @14@: Data line @7@
+                     , lcdRows     :: Int  -- ^ Number of rows (typically 1 or 2, upto 4)
+                     , lcdCols     :: Int  -- ^ Number of cols (typically 16 or 20, upto 40)
                      , dotMode5x10 :: Bool -- ^ Set to True if 5x10 dots are used
                      }
                      deriving Show
