@@ -31,6 +31,8 @@ module System.Hardware.Arduino.LCD(
   , lcdBlinkOn, lcdBlinkOff
   , lcdCursorOn, lcdCursorOff
   , lcdDisplayOn, lcdDisplayOff
+  -- * Misc helpers
+  , lcdFlash
   )  where
 
 import Control.Concurrent  (modifyMVar, withMVar)
@@ -232,7 +234,8 @@ lcdSetCursor lcd (givenCol, givenRow) = withLCD lcd ("Sending the cursor to Row:
                     rowOffsets = [(0, 0), (1, 0x40), (2, 0x14), (3, 0x54)]
                     offset = col + fromMaybe 0x54 (row `lookup` rowOffsets)
 
--- | Scroll the display to the left by 1 character
+-- | Scroll the display to the left by 1 character. Project idea: Using a tilt sensor, scroll the contents of the display
+-- left/right depending on the tilt. 
 lcdScrollDisplayLeft :: LCD -> Arduino ()
 lcdScrollDisplayLeft lcd = withLCD lcd "Scrolling display to the left by 1" $ \c -> sendCmd c (LCD_CURSORSHIFT lcdMoveLeft)
   where lcdMoveLeft = 0x00
@@ -347,3 +350,10 @@ lcdAutoScrollOn = updateDisplayMode "Setting auto-scroll ON" (setMask LCD_ENTRYS
 -- do not fit into the display.
 lcdAutoScrollOff :: LCD -> Arduino ()
 lcdAutoScrollOff = updateDisplayMode "Setting auto-scroll OFF" (clearMask LCD_ENTRYSHIFTINCREMENT)
+
+-- | Flash contents of the LCD screen
+lcdFlash :: LCD
+         -> Int  -- ^ Flash count
+         -> Int  -- ^ Delay amount (in milli-seconds)
+         -> Arduino ()
+lcdFlash lcd n d = sequence_ $ concat $ replicate n [lcdDisplayOff lcd, delay d, lcdDisplayOn lcd, delay d]

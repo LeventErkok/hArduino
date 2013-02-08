@@ -91,6 +91,9 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
         cursor lcd a = case words a of
                         [col, row] | all isDigit (row ++ col) -> lcdSetCursor lcd (read col, read row)
                         _                                     -> liftIO $ putStrLn "Invalid parameters."
+        flash lcd a  = case words a of
+                        [n] | all isDigit n -> lcdFlash lcd (read n) 500
+                        _                   -> liftIO $ putStrLn "Invalid parameters"
         commands = [ ("?",           ("",        "Display this help message",   arg0 help))
                    , ("clear",       ("",        "Clear the LCD screen",        arg1 lcdClear))
                    , ("write",       ("string",  "Write to the LCD",            arg2 lcdWrite))
@@ -108,4 +111,5 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
                    , ("cursorOff",   ("",        "Do not display the cursor",   arg1 lcdCursorOff))
                    , ("displayOn",   ("",        "Turn the display on",         arg1 lcdDisplayOn))
                    , ("displayOff",  ("",        "Turn the display off",        arg1 lcdDisplayOff))
+                   , ("flash",       ("n",       "Flash the display n times",   arg2 flash))
                    ]
