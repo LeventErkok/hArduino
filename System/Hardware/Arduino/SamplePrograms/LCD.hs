@@ -11,8 +11,10 @@
 
 module System.Hardware.Arduino.SamplePrograms.LCD where
 
-import Data.Char           (isSpace, isDigit)
 import Control.Monad.Trans (liftIO)
+import Data.Char           (isSpace, isDigit)
+import Data.Word           (Word8)
+import Numeric             (showHex)
 
 import System.Hardware.Arduino
 import System.Hardware.Arduino.LCD
@@ -62,12 +64,48 @@ hitachi = Hitachi44780 { lcdRS   = pin 12  --     4      Register-select
                        , dotMode5x10 = False -- Using the standard 5x8 dots
                        }
 
+-- | The happy glyph. See 'lcdCreateSymbol' for details on how to create new ones.
+happy :: [String]
+happy = [ "     "
+        , "@   @"
+        , "     "
+        , "     "
+        , "@   @"
+        , " @@@ "
+        , "     "
+        , "     "
+        ]
+
+-- | The sad glyph. See 'lcdCreateSymbol' for details on how to create new ones.
+sad :: [String]
+sad = [ "     "
+      , "@   @"
+      , "     "
+      , "     "
+      , "     "
+      , " @@@ "
+      , "@   @"
+      , "     "
+      ]
+
 -- | Access the LCD connected to Arduino, making it show messages
 -- we read from the user.
 lcdDemo :: IO ()
 lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
               lcd <- lcdRegister hitachi
-              liftIO $ putStrLn "Hitachi controller demo.. Type ? for available commands."
+              happySymbol <- lcdCreateSymbol lcd happy
+              sadSymbol   <- lcdCreateSymbol lcd sad
+              lcdHome lcd
+              liftIO $ do putStrLn "Hitachi controller demo.."
+                          putStrLn ""
+                          putStrLn "Looking for an example? Try the following sequence:"
+                          putStrLn "    cursor 5 0"
+                          putStrLn "    happy"
+                          putStrLn "    write _"
+                          putStrLn "    happy"
+                          putStrLn "    flash 5"
+                          putStrLn ""
+                          putStrLn "Type ? to see all available commands."
               let repl = do liftIO $ putStr "LCD> "
                             m <- liftIO getLine
                             case words m of
@@ -76,7 +114,7 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
                               (cmd:_)    -> case cmd `lookup` commands of
                                               Nothing        -> do liftIO $ putStrLn $ "Unknown command '" ++ cmd ++ "', type ? for help."
                                                                    repl
-                                              Just (_, _, c) -> do c lcd (dropWhile isSpace (drop (length cmd) m))
+                                              Just (_, _, c) -> do c lcd (dropWhile isSpace (drop (length cmd) m)) (happySymbol, sadSymbol)
                                                                    repl
               repl
   where help = liftIO $ do let (cmds, args, hlps) = unzip3 $ ("quit", "", "Quit the demo") : [(c, a, h) | (c, (a, h, _)) <- commands]
@@ -85,14 +123,26 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
                                pad l s = take l (s ++ repeat ' ')
                                line (c, a, h) = putStrLn $ pad clen c ++ pad alen a ++ h
                            mapM_ line $ zip3 cmds args hlps
-        arg0 f _   _ = f
-        arg1 f lcd _ = f lcd
-        arg2         = id
+        arg0 f _   [] _ = f
+        arg0 _ _   a  _ = liftIO $ putStrLn $ "Unexpected arguments: " ++ show a
+        arg1 f lcd [] _ = f lcd
+        arg1 _ _   a  _ = liftIO $ putStrLn $ "Unexpected arguments: " ++ show a
+        arg2 f lcd a _  = f lcd a
+        arg3            = id
         cursor lcd a = case words a of
                         [col, row] | all isDigit (row ++ col) -> lcdSetCursor lcd (read col, read row)
                         _                                     -> liftIO $ putStrLn "Invalid parameters."
         flash lcd a  = case words a of
                         [n] | all isDigit n -> lcdFlash lcd (read n) 500
+                        _                   -> liftIO $ putStrLn "Invalid parameters"
+        symbol isHappy lcd _ (h, s) = lcdWriteSymbol lcd (if isHappy then h else s)
+        code lcd a = case words a of
+                        [n] -> case reads n :: [(Word8, String)] of
+                                  [(v, "")] -> do lcdClear lcd
+                                                  lcdHome lcd
+                                                  lcdWriteSymbol lcd (lcdInternalSymbol v)
+                                                  lcdWrite lcd $ " (Code: 0x" ++ showHex v "" ++ ")"
+                                  _         -> liftIO $ putStrLn "Invalid parameters"
                         _                   -> liftIO $ putStrLn "Invalid parameters"
         commands = [ ("?",           ("",        "Display this help message",   arg0 help))
                    , ("clear",       ("",        "Clear the LCD screen",        arg1 lcdClear))
@@ -112,4 +162,7 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
                    , ("displayOn",   ("",        "Turn the display on",         arg1 lcdDisplayOn))
                    , ("displayOff",  ("",        "Turn the display off",        arg1 lcdDisplayOff))
                    , ("flash",       ("n",       "Flash the display n times",   arg2 flash))
+                   , ("happy",       ("",        "Draw a smiling face",         arg3 (symbol True)))
+                   , ("sad",         ("",        "Draw a sad face",             arg3 (symbol False)))
+                   , ("code",        ("n",       "Write symbol with code n",    arg2 code))
                    ]

@@ -31,6 +31,10 @@ module System.Hardware.Arduino.LCD(
   , lcdBlinkOn, lcdBlinkOff
   , lcdCursorOn, lcdCursorOff
   , lcdDisplayOn, lcdDisplayOff
+  -- * Accessing internal symbols,
+  , LCDSymbol, lcdInternalSymbol, lcdWriteSymbol
+  -- Creating custom symbols
+  , lcdCreateSymbol
   -- * Misc helpers
   , lcdFlash
   )  where
@@ -38,8 +42,8 @@ module System.Hardware.Arduino.LCD(
 import Control.Concurrent  (modifyMVar, withMVar)
 import Control.Monad       (when)
 import Control.Monad.State (gets, liftIO)
-import Data.Bits           (testBit, (.|.), (.&.), setBit, clearBit)
-import Data.Char           (ord)
+import Data.Bits           (testBit, (.|.), (.&.), setBit, clearBit, shiftL, bit)
+import Data.Char           (ord, isSpace)
 import Data.Maybe          (fromMaybe)
 import Data.Word           (Word8)
 
@@ -60,10 +64,11 @@ data Cmd = LCD_INITIALIZE
          | LCD_FUNCTIONSET
          | LCD_DISPLAYCONTROL Word8
          | LCD_CLEARDISPLAY
-         | LCD_ENTRYMODESET Word8
+         | LCD_ENTRYMODESET   Word8
          | LCD_RETURNHOME
-         | LCD_SETDDRAMADDR Word8
-         | LCD_CURSORSHIFT Word8
+         | LCD_SETDDRAMADDR   Word8
+         | LCD_CURSORSHIFT    Word8
+         | LCD_SETCGRAMADDR   Word8
 
 -- | Convert a command to a data-word
 getCmdVal :: LCDController -> Cmd -> Word8
@@ -84,6 +89,7 @@ getCmdVal Hitachi44780{lcdRows, dotMode5x10} = get
         get LCD_RETURNHOME         = 0x02
         get (LCD_SETDDRAMADDR w)   = 0x80 .|. w
         get (LCD_CURSORSHIFT w)    = 0x10 .|. 0x08 .|. w   -- NB. LCD_DISPLAYMOVE (0x08) hard coded here
+        get (LCD_SETCGRAMADDR w)   = 0x40 .|. w `shiftL` 3
 
 -- | Initialize the LCD. Follows the data sheet <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>,
 -- page 46; figure 24.
@@ -97,12 +103,13 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     delay 5
     sendCmd c LCD_INITIALIZE_END
     sendCmd c LCD_FUNCTIONSET
-    lcdDisplayOn lcd
     lcdCursorOff lcd
     lcdBlinkOff lcd
-    lcdClear lcd
     lcdLeftToRight lcd
     lcdAutoScrollOff lcd
+    lcdHome lcd
+    lcdClear lcd
+    lcdDisplayOn lcd
 
 -- | Get the controller associated with the LCD
 getController :: LCD -> Arduino LCDController
@@ -185,6 +192,7 @@ lcdRegister controller = do
                     let n = M.size $ lcds bst
                         ld = LCDData { lcdDisplayMode    = 0
                                      , lcdDisplayControl = 0
+                                     , lcdGlyphCount     = 0
                                      , lcdController     = controller
                                      }
                     return (bst {lcds = M.insert (LCD n) ld (lcds bst)}, LCD n)
@@ -357,3 +365,65 @@ lcdFlash :: LCD
          -> Int  -- ^ Delay amount (in milli-seconds)
          -> Arduino ()
 lcdFlash lcd n d = sequence_ $ concat $ replicate n [lcdDisplayOff lcd, delay d, lcdDisplayOn lcd, delay d]
+
+-- | An abstract symbol type for user created symbols
+newtype LCDSymbol = LCDSymbol Word8
+
+-- | Create a custom symbol for later display. Note that controllers
+-- have limited capability for such symbols, typically storing no more
+-- than 8. The behavior is undefined if you create more symbols than your
+-- LCD can handle.
+--
+-- The input is a simple description of the glyph, as a list of precisely 8
+-- strings, each of which must have 5 characters. Any space character is
+-- interpreted as a empty pixel, any non-space is a full pixel, corresponding
+-- to the pixel in the 5x8 characters we have on the LCD.  For instance, here's
+-- a happy-face glyph you can use:
+--
+-- >
+-- >   [ "     "
+-- >   , "@   @"
+-- >   , "     "
+-- >   , "     "
+-- >   , "@   @"
+-- >   , " @@@ "
+-- >   , "     "
+-- >   , "     "
+-- >   ]
+-- >
+lcdCreateSymbol :: LCD -> [String] -> Arduino LCDSymbol
+lcdCreateSymbol lcd glyph
+  | length glyph /= 8 || any (/= 5) (map length glyph)
+  = error "hArduino: lcdCreateSymbol: Invalid glyph description: must be 8x5!"
+  | True
+  = do bs <- gets boardState
+       (i, c) <- liftIO $ modifyMVar bs $ \bst ->
+                    case lcd `M.lookup` lcds bst of
+                      Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                      Just ld@LCDData{lcdGlyphCount, lcdController}
+                              -> do let ld' = ld { lcdGlyphCount = lcdGlyphCount + 1 }
+                                    return (bst{lcds = M.insert lcd ld' (lcds bst)}, (lcdGlyphCount, lcdController))
+       sendCmd c (LCD_SETCGRAMADDR i)
+       let cvt :: String -> Word8
+           cvt s = foldr (.|.) 0 [bit p | (ch, p) <- zip (reverse s) [0..], not (isSpace ch)]
+       mapM_ (sendData c . cvt) glyph
+       return $ LCDSymbol i
+
+-- | Display a user created symbol on the LCD. (See 'lcdCreateSymbol' for details.)
+lcdWriteSymbol :: LCD -> LCDSymbol -> Arduino ()
+lcdWriteSymbol lcd (LCDSymbol i) = withLCD lcd ("Writing custom symbol " ++ show i ++ " to LCD") $ \c -> sendData c i
+
+-- | Access an internally stored symbol, one that is not available via its ASCII equivalent. See
+-- the Hitachi datasheet for possible values: <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>, Table 4 on page 17.
+--
+-- For instance, to access the symbol right-arrow:
+--
+--   * Locate it in the above table: Right-arrow is at the second-to-last row, 7th character from left.
+--
+--   * Check the upper/higher bits as specified in the table: For Right-arrow, upper bits are @0111@ and the
+--     lower bits are @1110@; which gives us the code @01111110@, or @0x7E@.
+--
+--   * So, right-arrow can be accessed by symbol code 'lcdInternalSymbol' @0x7E@, which will give us a 'LCDSymbol' value
+--   that can be passed to the 'lcdWriteSymbol' function. The code would look like this: @lcdWriteSymbol lcd (lcdInternalSymbol 0x7E)@.
+lcdInternalSymbol :: Word8 -> LCDSymbol
+lcdInternalSymbol = LCDSymbol

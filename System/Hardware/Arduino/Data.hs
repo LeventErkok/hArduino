@@ -146,6 +146,7 @@ data LCDController = Hitachi44780 {
 data LCDData = LCDData {
                   lcdDisplayMode    :: Word8         -- ^ Display mode (left/right/scrolling etc.)
                 , lcdDisplayControl :: Word8         -- ^ Display control (blink on/off, display on/off etc.)
+                , lcdGlyphCount     :: Word8         -- ^ Count of custom created glyphs (typically at most 8)
                 , lcdController     :: LCDController -- ^ Actual controller
                 }
 
