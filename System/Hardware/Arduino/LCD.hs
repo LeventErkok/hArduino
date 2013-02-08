@@ -24,13 +24,13 @@ module System.Hardware.Arduino.LCD(
   -- * Moving the cursor
   , lcdHome, lcdSetCursor
   -- * Scrolling
-  , lcdAutoScrollOff, lcdAutoScrollOn
+  , lcdAutoScrollOn, lcdAutoScrollOff
   , lcdScrollDisplayLeft, lcdScrollDisplayRight
   -- * Display properties
   , lcdLeftToRight, lcdRightToLeft
   , lcdBlinkOn, lcdBlinkOff
   , lcdCursorOn, lcdCursorOff
-  , lcdDisplayOff, lcdDisplayOn
+  , lcdDisplayOn, lcdDisplayOff
   )  where
 
 import Control.Concurrent  (modifyMVar, withMVar)
@@ -84,21 +84,7 @@ getCmdVal Hitachi44780{lcdRows, dotMode5x10} = get
         get (LCD_CURSORSHIFT w)    = 0x10 .|. 0x08 .|. w   -- NB. LCD_DISPLAYMOVE (0x08) hard coded here
 
 -- | Initialize the LCD. Follows the data sheet <http://lcd-linux.sourceforge.net/pdfdocs/hd44780.pdf>,
--- page 46; figure 24. When initialization is complete, we will:
---
---   * Set display ON (Use 'lcdDisplayOn'/'lcdDisplayOff' to change.)
---
---   * Set cursor OFF (Use 'lcdCursorOn'/'lcdCursorOff' to change.)
---
---   * Set blink OFF  (Use ' lcdBlinkOn'/'lcdBlinkOff' to change.)
---
---   * Clear display (Use 'lcdClear' to clear, 'lcdWrite' to send text.)
---
---   * Set entry mode left to write (Use 'lcdLeftToRight'/'lcdRightToLeft' to control.)
---
---   * Set autoscrolling OFF (Use 'lcdAutoScrollOff'/'lcdAutoScrollOn' to control.)
---
---   * Put the cursor into home position (Use 'lcdSetCursor' to move around.)
+-- page 46; figure 24.
 initLCD :: LCD -> LCDController -> Arduino ()
 initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
     debug "Starting the LCD initialization sequence"
@@ -175,7 +161,21 @@ withLCD lcd what action = do
 -- High level interface, exposed to the user
 ---------------------------------------------------------------------------------------
 
--- | Register an LCD controller
+-- | Register an LCD controller. When registration is complete, the LCD will be initialized so that:
+--
+--   * Set display ON (Use 'lcdDisplayOn' / 'lcdDisplayOff' to change.)
+--
+--   * Set cursor OFF (Use 'lcdCursorOn' / 'lcdCursorOff' to change.)
+--
+--   * Set blink OFF  (Use 'lcdBlinkOn' / 'lcdBlinkOff' to change.)
+--
+--   * Clear display (Use 'lcdClear' to clear, 'lcdWrite' to display text.)
+--
+--   * Set entry mode left to write (Use 'lcdLeftToRight' / 'lcdRightToLeft' to control.)
+--
+--   * Set autoscrolling OFF (Use 'lcdAutoScrollOff' / 'lcdAutoScrollOn' to control.)
+--
+--   * Put the cursor into home position (Use 'lcdSetCursor' or 'lcdHome' to move around.)
 lcdRegister :: LCDController -> Arduino LCD
 lcdRegister controller = do
   bs <- gets boardState
@@ -300,7 +300,8 @@ lcdBlinkOff = updateDisplayControl "Turning blinking off" (clearMask LCD_BLINKON
 lcdBlinkOn :: LCD -> Arduino ()
 lcdBlinkOn = updateDisplayControl "Turning blinking on" (setMask LCD_BLINKON)
 
--- | Hide the cursor
+-- | Hide the cursor. Note that a blinking cursor cannot be hidden, you must first
+-- turn off blinking.
 lcdCursorOff :: LCD -> Arduino ()
 lcdCursorOff = updateDisplayControl "Not showing the cursor" (clearMask LCD_CURSORON)
 
@@ -308,7 +309,11 @@ lcdCursorOff = updateDisplayControl "Not showing the cursor" (clearMask LCD_CURS
 lcdCursorOn :: LCD -> Arduino ()
 lcdCursorOn = updateDisplayControl "Showing the cursor" (setMask LCD_CURSORON)
 
--- | Turn the display off
+-- | Turn the display off. Note that turning the display off does not mean you are
+-- powering it down. It simply means that the characters will not be shown until
+-- you turn it back on using 'lcdDisplayOn'. (Also, the contents will /not/ be
+-- forgotten when you call this function.) Therefore, this function is useful
+-- for temporarily hiding the display contents.
 lcdDisplayOff :: LCD -> Arduino ()
 lcdDisplayOff = updateDisplayControl "Turning display off" (clearMask LCD_DISPLAYON)
 
@@ -324,10 +329,21 @@ lcdLeftToRight = updateDisplayMode "Setting left-to-right entry mode" (setMask L
 lcdRightToLeft :: LCD -> Arduino ()
 lcdRightToLeft = updateDisplayMode "Setting right-to-left entry mode" (clearMask LCD_ENTRYLEFT)
 
--- | Turn on auto-scrolling
+-- | Turn on auto-scrolling. In the context of the Hitachi44780 controller, this means that
+-- each time a letter is added, all the text is moved one space to the left. This can be
+-- confusing at first: It does /not/ mean that your strings will continuously scroll:
+-- It just means that if you write a string whose length exceeds the column-count
+-- of your LCD, then you'll see the tail-end of it. (Of course, this will create a scrolling
+-- effect as the string is being printed character by character.)
+--
+-- Having said that, it is easy to program a scrolling string program: Simply write your string
+-- by calling 'lcdWrite', and then use the 'lcdScrollDisplayLeft' and 'lcdScrollDisplayRight' functions
+-- with appropriate delays to simulate the scrolling.
 lcdAutoScrollOn :: LCD -> Arduino ()
 lcdAutoScrollOn = updateDisplayMode "Setting auto-scroll ON" (setMask LCD_ENTRYSHIFTINCREMENT)
 
--- | Turn off auto-scrolling
+-- | Turn off auto-scrolling. See the comments for 'lcdAutoScrollOn' for details. When turned
+-- off (which is the default), you will /not/ see the characters at the end of your strings that
+-- do not fit into the display.
 lcdAutoScrollOff :: LCD -> Arduino ()
 lcdAutoScrollOff = updateDisplayMode "Setting auto-scroll OFF" (clearMask LCD_ENTRYSHIFTINCREMENT)

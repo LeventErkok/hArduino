@@ -11,6 +11,7 @@
 
 module System.Hardware.Arduino.SamplePrograms.LCD where
 
+import Data.Char           (isSpace, isDigit)
 import Control.Monad.Trans (liftIO)
 
 import System.Hardware.Arduino
@@ -66,12 +67,45 @@ hitachi = Hitachi44780 { lcdRS   = pin 12  --     4      Register-select
 lcdDemo :: IO ()
 lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
               lcd <- lcdRegister hitachi
-              liftIO $ putStrLn "Hitachi controller demo.. Type :q to quit."
-              let repl = do liftIO $ putStr "Message> "
+              liftIO $ putStrLn "Hitachi controller demo.. Type ? for available commands."
+              let repl = do liftIO $ putStr "LCD> "
                             m <- liftIO getLine
-                            case m of
-                             ":q" -> return ()
-                             _    -> do lcdClear lcd
-                                        lcdWrite lcd m
-                                        repl
+                            case words m of
+                              []       -> repl
+                              ["quit"] -> return ()
+                              (cmd:_)    -> case cmd `lookup` commands of
+                                              Nothing        -> do liftIO $ putStrLn $ "Unknown command '" ++ cmd ++ "', type ? for help."
+                                                                   repl
+                                              Just (_, _, c) -> do c lcd (dropWhile isSpace (drop (length cmd) m))
+                                                                   repl
               repl
+  where help = liftIO $ do let (cmds, args, hlps) = unzip3 $ ("quit", "", "Quit the demo") : [(c, a, h) | (c, (a, h, _)) <- commands]
+                               clen = 1 + maximum (map length cmds)
+                               alen = 8 + maximum (map length args)
+                               pad l s = take l (s ++ repeat ' ')
+                               line (c, a, h) = putStrLn $ pad clen c ++ pad alen a ++ h
+                           mapM_ line $ zip3 cmds args hlps
+        arg0 f _   _ = f
+        arg1 f lcd _ = f lcd
+        arg2         = id
+        cursor lcd a = case words a of
+                        [col, row] | all isDigit (row ++ col) -> lcdSetCursor lcd (read col, read row)
+                        _                                     -> liftIO $ putStrLn "Invalid parameters."
+        commands = [ ("?",           ("",        "Display this help message",   arg0 help))
+                   , ("clear",       ("",        "Clear the LCD screen",        arg1 lcdClear))
+                   , ("write",       ("string",  "Write to the LCD",            arg2 lcdWrite))
+                   , ("home",        ("",        "Move cursor to home",         arg1 lcdHome))
+                   , ("cursor",      ("col row", "Move cursor to col row",      arg2 cursor))
+                   , ("scrollOff",   ("",        "Turn off auto-scroll",        arg1 lcdAutoScrollOff))
+                   , ("scrollOn",    ("",        "Turn on auto-scroll",         arg1 lcdAutoScrollOn))
+                   , ("scrollLeft",  ("",        "Scroll left by 1 char",       arg1 lcdScrollDisplayLeft))
+                   , ("scrollRight", ("",        "Scroll right by 1 char",      arg1 lcdScrollDisplayRight))
+                   , ("leftToRight", ("",        "Set left to right direction", arg1 lcdLeftToRight))
+                   , ("rightToLeft", ("",        "Set left to right direction", arg1 lcdRightToLeft))
+                   , ("blinkOn",     ("",        "Set blinking ON",             arg1 lcdBlinkOn))
+                   , ("blinkOff",    ("",        "Set blinking ON",             arg1 lcdBlinkOff))
+                   , ("cursorOn",    ("",        "Display the cursor",          arg1 lcdCursorOn))
+                   , ("cursorOff",   ("",        "Do not display the cursor",   arg1 lcdCursorOff))
+                   , ("displayOn",   ("",        "Turn the display on",         arg1 lcdDisplayOn))
+                   , ("displayOff",  ("",        "Turn the display off",        arg1 lcdDisplayOff))
+                   ]
