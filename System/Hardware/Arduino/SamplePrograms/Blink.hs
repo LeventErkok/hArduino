@@ -23,7 +23,7 @@ import System.Hardware.Arduino
 -- Note that you do not need any other components to run this example: Just hook
 -- up your Arduino to the computer and make sure StandardFirmata is running on it.
 -- However, you can connect a LED between Pin13 and GND if you want to blink an
--- external led, like so:
+-- external led as well, as depicted below:
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Blink.png>>
 blink :: IO ()
