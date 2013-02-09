@@ -16,17 +16,28 @@ import Control.Monad.Trans (liftIO)
 
 import System.Hardware.Arduino
 
--- | Read the value of an analog input line. The circuit simply
--- has a 10K potentiometer between 5V and GND, with the wiper
--- line connected to analog input 0.
+-- | Read the value of an analog input line. We will print the value
+-- on the screen, and also blink a led on the Arduino based on the
+-- value. The smaller the value, the faster the blink.
+--
+-- The circuit simply has a 10K potentiometer between 5V and GND, with
+-- the wiper line connected to analog input 3. We also have a led between
+-- pin 13 and GND.
+--
+--  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Analog.png>>
 analogVal :: IO ()
 analogVal = withArduino False "/dev/cu.usbmodemfd131" $ do
+               setPinMode led OUTPUT
                setPinMode pot ANALOG
                cur <- analogRead pot
                liftIO $ print cur
                go cur
-  where pot = pin 14 -- NB. Analog-0 is pin 14 on the UNO
-        go prev = do delay 100
-                     new <- analogRead pot
-                     when (prev /= new) $ liftIO $ print new
-                     go new
+  where led = pin 13
+        pot = pin 17 -- NB. Analog-3 is pin 17 on the UNO
+        go cur = do digitalWrite led True
+                    delay cur
+                    digitalWrite led False
+                    delay cur
+                    new <- analogRead pot
+                    when (cur /= new) $ liftIO $ print new
+                    go new
