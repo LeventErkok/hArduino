@@ -13,7 +13,7 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (myThreadId, throwTo, newChan, newMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_)
+import Control.Concurrent   (MVar, myThreadId, ThreadId, throwTo, newChan, newMVar, newEmptyMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_, tryTakeMVar, killThread)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit, (.&.))
@@ -50,7 +50,8 @@ withArduino verbose fp program =
            _ <- installHandler keyboardSignal (Catch (throwTo tid UserInterrupt)) Nothing
            debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
-           let Arduino controller = do initialize
+           listenerTid <- newEmptyMVar
+           let Arduino controller = do initialize listenerTid
                                        program
            S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
                 let initBoardState = BoardState {
@@ -73,7 +74,11 @@ withArduino verbose fp program =
                               }
                 res <- tryJust catchCtrlC $ runStateT controller initState
                 case res of
-                  Left () -> putStrLn "hArduino: Caught Ctrl-C, quitting.."
+                  Left () -> do putStrLn "hArduino: Caught Ctrl-C, quitting.."
+                                mbltid <- tryTakeMVar listenerTid
+                                case mbltid of
+                                  Just t -> killThread t
+                                  _      -> return ()
                   _       -> return ()
  where catchCtrlC UserInterrupt = Just ()
        catchCtrlC _             = Nothing
@@ -96,7 +101,7 @@ recv = do ch <- gets deviceChannel
 -- | Start a thread to listen to the board and populate the channel with incoming queries.
 -- NB. This function is run in a thread; so be careful not to throw error or die otherwise
 -- in here.
-setupListener :: Arduino ()
+setupListener :: Arduino ThreadId
 setupListener = do
         serial <- gets port
         dbg    <- gets message
@@ -153,12 +158,14 @@ setupListener = do
         bs <- gets boardState
         tid <- liftIO $ forkIO $ forever (listener bs)
         debug $ "Started listener thread: " ++ show tid
+        return tid
 
 -- | Initialize our board, get capabilities, etc
-initialize :: Arduino ()
-initialize = do
+initialize :: MVar ThreadId -> Arduino ()
+initialize ltid = do
      -- Step 0: Set up the listener thread
-     setupListener
+     tid <- setupListener
+     liftIO $ putMVar ltid tid
      -- Step 1: Send a reset to get things going
      send SystemReset
      -- Step 2: Send query-firmware, and wait until we get a response
