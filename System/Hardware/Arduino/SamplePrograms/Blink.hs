@@ -20,10 +20,10 @@ import System.Hardware.Arduino
 -- | Blink the led connected to port 13 on the Arduino UNO board.
 -- The blinking will synchronize with the printing of a dot on stdout.
 --
--- Depending on your set-up, you will need to change the path to the
--- USB board. If you have problems, try changing the first argument
--- to 'True' in the call to 'withArduino', which will hopefully print
--- a useful diagnostic message.
+-- Note that you do not need any other components to run this example: Just hook
+-- up your Arduino to the computer and make sure StandardFirmata is running on it.
+-- However, you can connect a LED between Pin13 and GND if you want to blink an
+-- external led.
 blink :: IO ()
 blink = withArduino False "/dev/cu.usbmodemfd131" $ do
            liftIO $ hSetBuffering stdout NoBuffering
