@@ -12,8 +12,7 @@
 module System.Hardware.Arduino.SamplePrograms.LCD where
 
 import Control.Monad.Trans (liftIO)
-import Data.Char           (isSpace, isDigit)
-import Data.Word           (Word8)
+import Data.Char           (isSpace)
 import Numeric             (showHex)
 
 import System.Hardware.Arduino
@@ -128,23 +127,21 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
         arg0 _ _   a  _ = liftIO $ putStrLn $ "Unexpected arguments: " ++ show a
         arg1 f lcd [] _ = f lcd
         arg1 _ _   a  _ = liftIO $ putStrLn $ "Unexpected arguments: " ++ show a
-        arg2 f lcd a _  = f lcd a
+        arg2 f lcd a  _ = f lcd a
         arg3            = id
-        cursor lcd a = case words a of
-                        [col, row] | all isDigit (row ++ col) -> lcdSetCursor lcd (read col, read row)
-                        _                                     -> liftIO $ putStrLn "Invalid parameters."
-        flash lcd a  = case words a of
-                        [n] | all isDigit n -> lcdFlash lcd (read n) 500
-                        _                   -> liftIO $ putStrLn "Invalid parameters"
+        grabNums n a f  = case [v | [(v, "")] <- map reads (words a)] of
+                            vs | length vs /= n -> liftIO $ putStrLn $ "Need " ++ show n ++ " numeric parameter" ++ if n == 1 then "." else "s."
+                            vs                  -> f vs
         symbol isHappy lcd _ (h, s) = lcdWriteSymbol lcd (if isHappy then h else s)
-        code lcd a = case words a of
-                        [n] -> case reads n :: [(Word8, String)] of
-                                  [(v, "")] -> do lcdClear lcd
-                                                  lcdHome lcd
-                                                  lcdWriteSymbol lcd (lcdInternalSymbol v)
-                                                  lcdWrite lcd $ " (Code: 0x" ++ showHex v "" ++ ")"
-                                  _         -> liftIO $ putStrLn "Invalid parameters"
-                        _                   -> liftIO $ putStrLn "Invalid parameters"
+        cursor lcd a = grabNums 2 a (\[col, row] -> lcdSetCursor lcd (col, row))
+        flash  lcd a = grabNums 1 a (\[n] -> lcdFlash lcd n 500)
+        code   lcd a = grabNums 1 a (\[n] -> do lcdClear lcd
+                                                lcdHome lcd
+                                                lcdWriteSymbol lcd (lcdInternalSymbol n)
+                                                lcdWrite lcd $ " (Code: 0x" ++ showHex n "" ++ ")")
+        scroll toLeft lcd a = grabNums 1 a (\[n] -> do let scr | toLeft = lcdScrollDisplayLeft
+                                                               | True   = lcdScrollDisplayRight
+                                                       sequence_ $ concat $ replicate n [scr lcd, delay 500])
         commands = [ ("?",           ("",        "Display this help message",   arg0 help))
                    , ("clear",       ("",        "Clear the LCD screen",        arg1 lcdClear))
                    , ("write",       ("string",  "Write to the LCD",            arg2 lcdWrite))
@@ -152,8 +149,8 @@ lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
                    , ("cursor",      ("col row", "Move cursor to col row",      arg2 cursor))
                    , ("scrollOff",   ("",        "Turn off auto-scroll",        arg1 lcdAutoScrollOff))
                    , ("scrollOn",    ("",        "Turn on auto-scroll",         arg1 lcdAutoScrollOn))
-                   , ("scrollLeft",  ("",        "Scroll left by 1 char",       arg1 lcdScrollDisplayLeft))
-                   , ("scrollRight", ("",        "Scroll right by 1 char",      arg1 lcdScrollDisplayRight))
+                   , ("scrollLeft",  ("n",       "Scroll left by n chars",      arg2 (scroll True)))
+                   , ("scrollRight", ("n",       "Scroll right by n char",      arg2 (scroll False)))
                    , ("leftToRight", ("",        "Set left to right direction", arg1 lcdLeftToRight))
                    , ("rightToLeft", ("",        "Set left to right direction", arg1 lcdRightToLeft))
                    , ("blinkOn",     ("",        "Set blinking ON",             arg1 lcdBlinkOn))
