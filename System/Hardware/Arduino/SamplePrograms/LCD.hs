@@ -48,7 +48,7 @@ import System.Hardware.Arduino.LCD
 --
 --  * [If backlight is needed] LCD pin @16@ to GND via 220ohm resistor
 --
---  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/LCD.png>>
+--  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/LCD.jpg>>
 hitachi :: LCDController
 -- Connections:                   ARDUINO     Hitachi   Description
 --------------------------------  -------    ---------  ----------------
