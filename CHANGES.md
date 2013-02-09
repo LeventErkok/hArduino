@@ -7,15 +7,15 @@
 
  * Library
     * Add support for pull-up resistors
-    * Implement routines for waiting on digital triggers (`waitAnyHigh`,
-      `waitAnyLow`, etc.) These routines allow fine control of digital
-      input pins on the Arduino.
+    * Implement routines for waiting on digital triggers
     * Add support for reading analog values and setting sampling frequency.
     * Add support for LCDs (based on the Hitachi 44780 chip)
+    * Better handling for Ctrl-C interrupts
  * Examples
     * Add counter: use push buttons to count up and down
     * Add analog-reading example
     * Add LCD controller example
+    * Add wiring schematics for all sample programs
 
 ### Version 0.2, 2013-01-28
 
