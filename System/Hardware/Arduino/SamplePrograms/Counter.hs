@@ -21,8 +21,8 @@ import System.Hardware.Arduino
 -- the internal or connect an external one), that we light up when the counter value
 -- is 0.
 --
--- Wiring is very simple, with up-button connected to pin 4, and down-button connected
--- to pin 2:
+-- Wiring is very simple: Up-button connected to pin 4, Down-button connected
+-- to pin 2, and a led on pin 13.
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Counter.png>>
 counter :: IO ()
