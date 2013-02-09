@@ -7,7 +7,8 @@
 -- Stability   :  experimental
 --
 -- Reads the value of a push-button and displays it's status continuously
--- on the computer screen and by blinking a led on the Arduino.
+-- on the computer screen and by lighting a led on the Arduino as long as
+-- the button is pressed.
 -------------------------------------------------------------------------------
 
 module System.Hardware.Arduino.SamplePrograms.Button where
