@@ -89,7 +89,8 @@ sad = [ "     "
       ]
 
 -- | Access the LCD connected to Arduino, making it show messages
--- we read from the user.
+-- we read from the user and demonstrate other LCD control features offered
+-- by hArduino.
 lcdDemo :: IO ()
 lcdDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
               lcd <- lcdRegister hitachi
