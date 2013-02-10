@@ -60,6 +60,6 @@ showBin n = showIntAtBase 2 (head . show) n ""
 -- | Turn a lo/hi encoded Arduino string constant into a Haskell string
 getString :: [Word8] -> String
 getString []         = ""
-getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen, but no need to error out either
+getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen
 getString (l:h:rest) = c : getString rest
   where c = chr $ fromIntegral $ h `shiftL` 8 .|. l
