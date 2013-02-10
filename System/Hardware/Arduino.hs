@@ -17,6 +17,9 @@
 -- Arduino! It simply allows you to control a board from Haskell, where you
 -- can exchange information with the board, send/receive commands from other
 -- peripherals connected, etc.
+--
+-- See <http://www.youtube.com/watch?v=PPa3im44t2g> for a short video (4m29)
+-- of the blink example.
 -------------------------------------------------------------------------------
 module System.Hardware.Arduino (
   -- * Running the controller

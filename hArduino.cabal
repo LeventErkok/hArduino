@@ -11,6 +11,8 @@ Description:   Control Arduino from Haskell, using the Firmata protocol.
                can exchange information with the board, send/receive commands from other
                peripherals connected, etc.
                .
+               A short (4m29s) video of the blinking example: <http://www.youtube.com/watch?v=PPa3im44t2g>
+               .
                hArduino is work-in-progress. Comments, bug-reports, and patches are welcome.
 Copyright:     Levent Erkok, 2013
 License:       BSD3
