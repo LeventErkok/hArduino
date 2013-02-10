@@ -381,7 +381,7 @@ getRemovalActions p ANALOG = do -- This pin is no longer analog
                     bst'  = bst { analogReportingPins = p `S.delete` aPins }
                 return (bst', acts)
 getRemovalActions _ OUTPUT = return []
-getRemovalActions p m = error $ "hArduino: getRemovalActions: TBD: Unsupported mode: " ++ show m ++ " on pin " ++ show p
+getRemovalActions p m = die ("hArduino: getRemovalActions: TBD: Unsupported mode: " ++ show m) ["On pin " ++ show p]
 
 -- | Depending on a mode-set call, determine what further
 -- actions should be executed, such as enabling/disabling pin/port reporting
@@ -411,4 +411,4 @@ getModeActions p ANALOG = do -- This pin just configured for analog
                                    }
                     return (bst', acts1 ++ acts2)
 getModeActions _ OUTPUT = return []
-getModeActions p m      = error $ "hArduino: getModeActions: TBD: Unsupported mode: " ++ show m ++ " on pin " ++ show p
+getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode: " ++ show m) ["On pin " ++ show p]

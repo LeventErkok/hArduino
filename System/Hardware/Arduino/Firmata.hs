@@ -31,7 +31,7 @@ queryFirmware = do
         r <- recv
         case r of
           Firmware v1 v2 m -> return (v1, v2, m)
-          _                -> error $ "queryFirmware: Got unexpected response for query firmware call: " ++ show r
+          _                -> U.die "queryFirmware: Got unexpected response for query firmware call: " [show r]
 
 -- | Delay the computaton for a given number of milli-seconds
 delay :: Int -> Arduino ()
@@ -163,7 +163,7 @@ analogRead p = do
 setAnalogSamplingInterval :: Int -> Arduino ()
 setAnalogSamplingInterval i
   | i < 10 || i > 16383
-  = error $ "hArduino: setAnalogSamplingInterval: Allowed interval is [10, 16383] ms, received: " ++ show i
+  = U.die ("hArduino: setAnalogSamplingInterval: Allowed interval is [10, 16383] ms, received: " ++ show i) []
   | True
   = send $ SamplingInterval (fromIntegral lsb) (fromIntegral msb)
   where lsb = i .&. 0x7f

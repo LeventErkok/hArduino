@@ -116,7 +116,7 @@ getController :: LCD -> Arduino LCDController
 getController lcd = do
   bs <- gets boardState
   liftIO $ withMVar bs $ \bst -> case lcd `M.lookup` lcds bst of
-                                   Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                                   Nothing -> U.die ("hArduino: Cannot locate " ++ show lcd) []
                                    Just ld -> return $ lcdController ld
 
 -- | Send a command to the LCD controller
@@ -263,7 +263,7 @@ updateDisplayData what (f, g) lcd = do
     , LCDData {lcdDisplayControl = newC, lcdDisplayMode = newM, lcdController = c})
         <- liftIO $ modifyMVar bs $ \bst ->
                        case lcd `M.lookup` lcds bst of
-                         Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                         Nothing -> U.die ("hArduino: Cannot locate " ++ show lcd) []
                          Just ld@LCDData{lcdDisplayControl, lcdDisplayMode}
                             -> do let ld' = ld { lcdDisplayControl = f lcdDisplayControl
                                                , lcdDisplayMode    = g lcdDisplayMode
@@ -394,12 +394,12 @@ newtype LCDSymbol = LCDSymbol Word8
 lcdCreateSymbol :: LCD -> [String] -> Arduino LCDSymbol
 lcdCreateSymbol lcd glyph
   | length glyph /= 8 || any (/= 5) (map length glyph)
-  = error "hArduino: lcdCreateSymbol: Invalid glyph description: must be 8x5!"
+  = U.die "hArduino: lcdCreateSymbol: Invalid glyph description: must be 8x5!" ("Received:" : glyph)
   | True
   = do bs <- gets boardState
        (i, c) <- liftIO $ modifyMVar bs $ \bst ->
                     case lcd `M.lookup` lcds bst of
-                      Nothing -> error $ "hArduino: Cannot locate " ++ show lcd
+                      Nothing -> U.die ("hArduino: Cannot locate " ++ show lcd) []
                       Just ld@LCDData{lcdGlyphCount, lcdController}
                               -> do let ld' = ld { lcdGlyphCount = lcdGlyphCount + 1 }
                                     return (bst{lcds = M.insert lcd ld' (lcds bst)}, (lcdGlyphCount, lcdController))
