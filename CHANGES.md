@@ -1,9 +1,9 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.2
+* Latest Hackage released version: 0.3
 
-### Version 0.3, Not yet released
+### Version 0.3, 2013-02-10
 
  * Library
     * Add support for pull-up resistors

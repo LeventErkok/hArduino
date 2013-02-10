@@ -14,7 +14,6 @@
 module System.Hardware.Arduino.SamplePrograms.Button where
 
 import Control.Monad.Trans (liftIO)
-import System.IO           (hSetBuffering, BufferMode(NoBuffering), stdout)
 
 import System.Hardware.Arduino
 
@@ -29,12 +28,11 @@ import System.Hardware.Arduino
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Button.png>>
 button :: IO ()
 button = withArduino False "/dev/cu.usbmodemfd131" $ do
-            liftIO $ hSetBuffering stdout NoBuffering
             setPinMode led OUTPUT
-            setPinMode but INPUT
-            go =<< digitalRead but
- where but  = pin 2
+            setPinMode pb  INPUT
+            go =<< digitalRead pb
+ where pb   = pin 2
        led  = pin 13
        go s = do liftIO $ putStrLn $ "Button is currently " ++ if s then "ON" else "OFF"
                  digitalWrite led s
-                 go =<< waitFor but
+                 go =<< waitFor pb
