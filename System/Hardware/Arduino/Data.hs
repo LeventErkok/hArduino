@@ -12,10 +12,11 @@
 {-# LANGUAGE DeriveFunctor               #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE NamedFieldPuns              #-}
+{-# LANGUAGE RankNTypes                  #-}
 module System.Hardware.Arduino.Data where
 
 import Control.Applicative        (Applicative)
-import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar)
+import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, ThreadId)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
@@ -162,12 +163,14 @@ data BoardState = BoardState {
 
 -- | State of the computation
 data ArduinoState = ArduinoState {
-                message       :: String -> IO ()     -- ^ Current debugging routine
-              , port          :: SerialPort          -- ^ Serial port we are communicating on
-              , firmataID     :: String              -- ^ The ID of the board (as identified by the Board itself)
-              , boardState    :: MVar BoardState     -- ^ Current state of the board
-              , deviceChannel :: Chan Response       -- ^ Incoming messages from the board
-              , capabilities  :: BoardCapabilities   -- ^ Capabilities of the board
+                message       :: String -> IO ()                      -- ^ Current debugging routine
+              , bailOut       :: forall a. String -> [String] -> IO a -- ^ Clean-up and quit with a hopefully informative message
+              , port          :: SerialPort                           -- ^ Serial port we are communicating on
+              , firmataID     :: String                               -- ^ The ID of the board (as identified by the Board itself)
+              , boardState    :: MVar BoardState                      -- ^ Current state of the board
+              , deviceChannel :: Chan Response                        -- ^ Incoming messages from the board
+              , capabilities  :: BoardCapabilities                    -- ^ Capabilities of the board
+              , listenerTid   :: MVar ThreadId                        -- ^ ThreadId of the listener
               }
 
 -- | The Arduino monad.
@@ -178,6 +181,11 @@ newtype Arduino a = Arduino (StateT ArduinoState IO a)
 debug :: String -> Arduino ()
 debug s = do f <- gets message
              liftIO $ f s
+
+-- | Bailing out: print the given string on stdout and die
+die :: String -> [String] -> Arduino a
+die m ms = do f <- gets bailOut
+              liftIO $ f m ms
 
 -- | Which modes does this pin support?
 getPinModes :: Pin -> Arduino [PinMode]
@@ -191,9 +199,10 @@ getPinModes p = do
 getPinData :: Pin -> Arduino PinData
 getPinData p = do
   bs  <- gets boardState
+  err <- gets bailOut
   liftIO $ withMVar bs $ \bst ->
      case p `M.lookup` pinStates bst of
-       Nothing -> die ("Trying to access " ++ show p ++ " without proper configuration.")
+       Nothing -> err ("Trying to access " ++ show p ++ " without proper configuration.")
                       ["Make sure that you use 'setPinMode' to configure this pin first."]
        Just pd -> return pd
 

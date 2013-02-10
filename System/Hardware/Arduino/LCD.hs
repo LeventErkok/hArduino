@@ -114,9 +114,10 @@ initLCD lcd c@Hitachi44780{lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7} = do
 -- | Get the controller associated with the LCD
 getController :: LCD -> Arduino LCDController
 getController lcd = do
-  bs <- gets boardState
+  bs  <- gets boardState
+  err <- gets bailOut
   liftIO $ withMVar bs $ \bst -> case lcd `M.lookup` lcds bst of
-                                   Nothing -> U.die ("hArduino: Cannot locate " ++ show lcd) []
+                                   Nothing -> err ("hArduino: Cannot locate " ++ show lcd) []
                                    Just ld -> return $ lcdController ld
 
 -- | Send a command to the LCD controller
@@ -258,12 +259,13 @@ lcdScrollDisplayRight lcd = withLCD lcd "Scrolling display to the right by 1" $ 
 updateDisplayData :: String -> (Word8 -> Word8, Word8 -> Word8) -> LCD -> Arduino ()
 updateDisplayData what (f, g) lcd = do
    debug what
-   bs <- gets boardState
+   bs  <- gets boardState
+   err <- gets bailOut
    (  LCDData {lcdDisplayControl = oldC, lcdDisplayMode = oldM}
     , LCDData {lcdDisplayControl = newC, lcdDisplayMode = newM, lcdController = c})
         <- liftIO $ modifyMVar bs $ \bst ->
                        case lcd `M.lookup` lcds bst of
-                         Nothing -> U.die ("hArduino: Cannot locate " ++ show lcd) []
+                         Nothing -> err ("hArduino: Cannot locate " ++ show lcd) []
                          Just ld@LCDData{lcdDisplayControl, lcdDisplayMode}
                             -> do let ld' = ld { lcdDisplayControl = f lcdDisplayControl
                                                , lcdDisplayMode    = g lcdDisplayMode
@@ -394,12 +396,13 @@ newtype LCDSymbol = LCDSymbol Word8
 lcdCreateSymbol :: LCD -> [String] -> Arduino LCDSymbol
 lcdCreateSymbol lcd glyph
   | length glyph /= 8 || any (/= 5) (map length glyph)
-  = U.die "hArduino: lcdCreateSymbol: Invalid glyph description: must be 8x5!" ("Received:" : glyph)
+  = die "hArduino: lcdCreateSymbol: Invalid glyph description: must be 8x5!" ("Received:" : glyph)
   | True
-  = do bs <- gets boardState
+  = do bs  <- gets boardState
+       err <- gets bailOut
        (i, c) <- liftIO $ modifyMVar bs $ \bst ->
                     case lcd `M.lookup` lcds bst of
-                      Nothing -> U.die ("hArduino: Cannot locate " ++ show lcd) []
+                      Nothing -> err ("hArduino: Cannot locate " ++ show lcd) []
                       Just ld@LCDData{lcdGlyphCount, lcdController}
                               -> do let ld' = ld { lcdGlyphCount = lcdGlyphCount + 1 }
                                     return (bst{lcds = M.insert lcd ld' (lcds bst)}, (lcdGlyphCount, lcdController))

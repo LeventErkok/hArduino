@@ -17,6 +17,7 @@ import Control.Concurrent   (MVar, myThreadId, ThreadId, throwTo, newChan, newMV
 import Control.Exception    (tryJust, AsyncException(UserInterrupt))
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit, (.&.))
+import Data.List            (intercalate)
 import Data.Maybe           (listToMaybe)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 
@@ -66,22 +67,27 @@ withArduino verbose fp program =
                 dc <- newChan
                 let initState = ArduinoState {
                                    message       = debugger
+                                 , bailOut       = bailOut listenerTid
                                  , port          = port
                                  , firmataID     = "Unknown"
                                  , capabilities  = BoardCapabilities M.empty
                                  , boardState    = bs
                                  , deviceChannel = dc
+                                 , listenerTid   = listenerTid
                               }
                 res <- tryJust catchCtrlC $ runStateT controller initState
                 case res of
-                  Left () -> do putStrLn "hArduino: Caught Ctrl-C, quitting.."
-                                mbltid <- tryTakeMVar listenerTid
-                                case mbltid of
-                                  Just t -> killThread t
-                                  _      -> return ()
+                  Left () -> putStrLn "hArduino: Caught Ctrl-C, quitting.."
                   _       -> return ()
+                cleanUp listenerTid
  where catchCtrlC UserInterrupt = Just ()
        catchCtrlC _             = Nothing
+       cleanUp tid = do mbltid <- tryTakeMVar tid
+                        case mbltid of
+                          Just t -> killThread t
+                          _      -> return ()
+       bailOut tid m ms = do cleanUp tid
+                             error $ "\n*** hArduino:ERROR: " ++ intercalate "\n*** " (m:ms)
 
 -- | Send down a request.
 send :: Request -> Arduino ()

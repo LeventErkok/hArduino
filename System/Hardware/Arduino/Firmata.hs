@@ -31,7 +31,7 @@ queryFirmware = do
         r <- recv
         case r of
           Firmware v1 v2 m -> return (v1, v2, m)
-          _                -> U.die "queryFirmware: Got unexpected response for query firmware call: " [show r]
+          _                -> die "queryFirmware: Got unexpected response for query firmware call: " [show r]
 
 -- | Delay the computaton for a given number of milli-seconds
 delay :: Int -> Arduino ()
@@ -49,7 +49,7 @@ digitalWrite :: Pin -> Bool -> Arduino ()
 digitalWrite p v = do
    -- first make sure we have this pin set as output
    pd <- getPinData p
-   when (pinMode pd /= OUTPUT) $ U.die ("Invalid digitalWrite call on pin " ++ show p)
+   when (pinMode pd /= OUTPUT) $ die ("Invalid digitalWrite call on pin " ++ show p)
                                        [ "The current mode for this pin is: " ++ show (pinMode pd)
                                        , "For digitalWrite, it must be set to: " ++ show OUTPUT
                                        , "via a proper call to setPinMode"
@@ -64,7 +64,7 @@ pullUpResistor :: Pin -> Bool -> Arduino ()
 pullUpResistor p v = do
    -- first make sure we have this pin set as input
    pd <- getPinData p
-   when (pinMode pd /= INPUT) $ U.die ("Invalid turnOnPullUpResistor call on pin " ++ show p)
+   when (pinMode pd /= INPUT) $ die ("Invalid turnOnPullUpResistor call on pin " ++ show p)
                                       [ "The current mode for this pin is: " ++ show (pinMode pd)
                                       , "For turnOnPullUpResistor, it must be set to: " ++ show INPUT
                                       , "via a proper call to setPinMode"
@@ -79,7 +79,7 @@ digitalRead :: Pin -> Arduino Bool
 digitalRead p = do
    -- first make sure we have this pin set as input
    pd <- getPinData p
-   when (pinMode pd /= INPUT) $ U.die ("Invalid digitalRead call on pin " ++ show p)
+   when (pinMode pd /= INPUT) $ die ("Invalid digitalRead call on pin " ++ show p)
                                       [ "The current mode for this pin is: " ++ show (pinMode pd)
                                       , "For digitalWrite, it must be set to: " ++ show INPUT
                                       , "via a proper call to setPinMode"
@@ -146,11 +146,11 @@ analogRead :: Pin -> Arduino Int
 analogRead p = do
    -- first make sure we have this pin set as analog
    pd <- getPinData p
-   when (pinMode pd /= ANALOG) $ U.die ("Invalid analogRead call on pin " ++ show p)
-                                        [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                        , "For analogRead, it must be set to: " ++ show ANALOG
-                                        , "via a proper call to setPinMode"
-                                        ]
+   when (pinMode pd /= ANALOG) $ die ("Invalid analogRead call on pin " ++ show p)
+                                     [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                     , "For analogRead, it must be set to: " ++ show ANALOG
+                                     , "via a proper call to setPinMode"
+                                     ]
    return $ case pinValue pd of
               Just (Right v) -> v
               _              -> 0 -- no (correctly-typed) value reported yet, default to False
@@ -163,7 +163,7 @@ analogRead p = do
 setAnalogSamplingInterval :: Int -> Arduino ()
 setAnalogSamplingInterval i
   | i < 10 || i > 16383
-  = U.die ("hArduino: setAnalogSamplingInterval: Allowed interval is [10, 16383] ms, received: " ++ show i) []
+  = die ("hArduino: setAnalogSamplingInterval: Allowed interval is [10, 16383] ms, received: " ++ show i) []
   | True
   = send $ SamplingInterval (fromIntegral lsb) (fromIntegral msb)
   where lsb = i .&. 0x7f
