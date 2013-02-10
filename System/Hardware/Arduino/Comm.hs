@@ -9,12 +9,13 @@
 -- Basic serial communication routines
 -------------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
 import Control.Concurrent   (MVar, myThreadId, ThreadId, throwTo, newChan, newMVar, newEmptyMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_, tryTakeMVar, killThread)
-import Control.Exception    (tryJust, AsyncException(UserInterrupt))
+import Control.Exception    (tryJust, AsyncException(UserInterrupt), handle, SomeException)
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit, (.&.))
 import Data.List            (intercalate)
@@ -54,7 +55,10 @@ withArduino verbose fp program =
            listenerTid <- newEmptyMVar
            let Arduino controller = do initialize listenerTid
                                        program
-           S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
+           handle (\(e::SomeException) -> do putStrLn $ "*** hArduino: Caught: " ++ show e
+                                             putStrLn $ "*** Make sure your Arduino is connected to " ++ fp
+                                             putStrLn   "*** And StandardFirmata is running on it!") $
+             S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
                 let initBoardState = BoardState {
                                          boardCapabilities    = BoardCapabilities M.empty
                                        , analogReportingPins  = S.empty
