@@ -21,6 +21,8 @@ import Data.Bits            (testBit, (.&.))
 import Data.List            (intercalate)
 import Data.Maybe           (listToMaybe)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
+import System.Timeout       (timeout)
+import System.IO            (stderr, hPutStrLn)
 
 import qualified Data.ByteString            as B (unpack, length)
 import qualified Data.Map                   as M (empty, mapWithKey, insert, assocs, lookup)
@@ -53,11 +55,16 @@ withArduino verbose fp program =
            debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
            listenerTid <- newEmptyMVar
-           let Arduino controller = do initialize listenerTid
+           let Arduino controller = do initOK <- initialize listenerTid
+                                       if initOK
+                                          then program
+                                          else error "Communication time-out (5s) expired."
                                        program
-           handle (\(e::SomeException) -> do putStrLn $ "*** hArduino: Caught: " ++ show e
-                                             putStrLn $ "*** Make sure your Arduino is connected to " ++ fp
-                                             putStrLn   "*** And StandardFirmata is running on it!") $
+           handle (\(e::SomeException) -> do cleanUp listenerTid
+                                             hPutStrLn stderr $ "*** hArduino:ERROR: " ++ show e
+                                                              ++ concatMap ("\n*** " ++) [ "Make sure your Arduino is connected to " ++ fp
+                                                                                         , "And StandardFirmata is running on it!"
+                                                                                         ]) $
              S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
                 let initBoardState = BoardState {
                                          boardCapabilities    = BoardCapabilities M.empty
@@ -108,9 +115,13 @@ recv :: Arduino Response
 recv = do ch <- gets deviceChannel
           liftIO $ readChan ch
 
+-- | Receive a sys-ex response with time-out. This is a blocking call, and will wait until
+-- either the time-out expires or the message is received
+recvTimeOut :: Int -> Arduino (Maybe Response)
+recvTimeOut n = do ch <- gets deviceChannel
+                   liftIO $ timeout n (readChan ch)
+
 -- | Start a thread to listen to the board and populate the channel with incoming queries.
--- NB. This function is run in a thread; so be careful not to throw error or die otherwise
--- in here.
 setupListener :: Arduino ThreadId
 setupListener = do
         serial <- gets port
@@ -170,8 +181,9 @@ setupListener = do
         debug $ "Started listener thread: " ++ show tid
         return tid
 
--- | Initialize our board, get capabilities, etc
-initialize :: MVar ThreadId -> Arduino ()
+-- | Initialize our board, get capabilities, etc. Returns True if initialization
+-- went OK, False if not.
+initialize :: MVar ThreadId -> Arduino Bool
 initialize ltid = do
      -- Step 0: Set up the listener thread
      tid <- setupListener
@@ -179,34 +191,43 @@ initialize ltid = do
      -- Step 1: Send a reset to get things going
      send SystemReset
      -- Step 2: Send query-firmware, and wait until we get a response
-     handshake QueryFirmware
-               (\r -> case r of {Firmware{} -> True; _ -> False})
-               (\(Firmware v1 v2 m) -> modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"}))
-     -- Step 3: Send a capabilities request
-     handshake CapabilityQuery
-               (\r -> case r of {Capabilities{} -> True; _ -> False})
-               (\(Capabilities c) -> modify (\s -> s{capabilities = c}))
-     -- Step 4: Send analog-mapping query
-     handshake AnalogMappingQuery
-               (\r -> case r of {AnalogMapping{} -> True; _ -> False})
-               (\(AnalogMapping as) -> do BoardCapabilities m <- gets capabilities
-                                          -- need to put capabilities to both outer and inner state
-                                          let caps = BoardCapabilities (M.mapWithKey (mapAnalog as) m)
-                                          modify (\s -> s{capabilities = caps})
-                                          bs <- gets boardState
-                                          liftIO $ modifyMVar_ bs $ \bst -> return bst{boardCapabilities = caps})
-     -- We're done, print capabilities in debug mode
-     caps <- gets capabilities
-     dbg <- gets message
-     liftIO $ dbg $ "Handshake complete. Board capabilities:\n" ++ show caps
- where handshake msg isOK process = do
+     -- To accommodate for the case when standard-Firmata may not be running,
+     -- we will time out after 10 seconds of waiting, which should be plenty
+     mbTo <- handshake QueryFirmware (Just (5000000 :: Int))
+                       (\r -> case r of {Firmware{} -> True; _ -> False})
+                       (\(Firmware v1 v2 m) -> modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"}))
+     case mbTo of
+       Nothing -> return False  -- timed out
+       Just () -> do -- Step 3: Send a capabilities request
+                     _ <- handshake CapabilityQuery Nothing
+                                    (\r -> case r of {Capabilities{} -> True; _ -> False})
+                                    (\(Capabilities c) -> modify (\s -> s{capabilities = c}))
+                     -- Step 4: Send analog-mapping query
+                     _ <- handshake AnalogMappingQuery Nothing
+                                    (\r -> case r of {AnalogMapping{} -> True; _ -> False})
+                                    (\(AnalogMapping as) -> do BoardCapabilities m <- gets capabilities
+                                                               -- need to put capabilities to both outer and inner state
+                                                               let caps = BoardCapabilities (M.mapWithKey (mapAnalog as) m)
+                                                               modify (\s -> s{capabilities = caps})
+                                                               bs <- gets boardState
+                                                               liftIO $ modifyMVar_ bs $ \bst -> return bst{boardCapabilities = caps})
+                     -- We're done, print capabilities in debug mode
+                     caps <- gets capabilities
+                     dbg <- gets message
+                     liftIO $ dbg $ "Handshake complete. Board capabilities:\n" ++ show caps
+                     return True
+ where handshake msg mbTOut isOK process = do
            dbg <- gets message
            send msg
-           let wait = do resp <- recv
-                         if isOK resp
-                            then process resp
-                            else do liftIO $ dbg $ "Skipping unexpected response: " ++ show resp
-                                    wait
+           let wait = do mbResp <- case mbTOut of
+                                     Nothing -> Just `fmap` recv
+                                     Just n  -> recvTimeOut n
+                         case mbResp of
+                           Nothing   -> return Nothing
+                           Just resp -> if isOK resp
+                                        then Just `fmap` process resp
+                                        else do liftIO $ dbg $ "Skipping unexpected response: " ++ show resp
+                                                wait
            wait
        mapAnalog bs p c
           | i < rl && m /= 0x7f
