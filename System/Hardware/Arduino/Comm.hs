@@ -18,7 +18,7 @@ import Control.Concurrent   (MVar, myThreadId, ThreadId, throwTo, newChan, newMV
 import Control.Exception    (tryJust, AsyncException(UserInterrupt), handle, SomeException)
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit, (.&.))
-import Data.List            (intercalate)
+import Data.List            (intercalate, isInfixOf)
 import Data.Maybe           (listToMaybe)
 import Data.Word            (Word8)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
@@ -62,10 +62,13 @@ withArduino verbose fp program =
                                           else error "Communication time-out (5s) expired."
                                        program
            handle (\(e::SomeException) -> do cleanUp listenerTid
-                                             hPutStrLn stderr $ "*** hArduino:ERROR: " ++ show e
-                                                              ++ concatMap ("\n*** " ++) [ "Make sure your Arduino is connected to " ++ fp
-                                                                                         , "And StandardFirmata is running on it!"
-                                                                                         ]) $
+                                             let selfErr = "*** hArduino" `isInfixOf` show e
+                                             hPutStrLn stderr $ if selfErr
+                                                                then dropWhile (== '\n') (show e)
+                                                                else "*** hArduino:ERROR: " ++ show e
+                                                                     ++ concatMap ("\n*** " ++) [ "Make sure your Arduino is connected to " ++ fp
+                                                                                                , "And StandardFirmata is running on it!"
+                                                                                                ]) $
              S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
                 let initBoardState = BoardState {
                                          boardCapabilities    = BoardCapabilities M.empty
