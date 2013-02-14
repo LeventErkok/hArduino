@@ -11,25 +11,16 @@
 module System.Hardware.Arduino.Utils where
 
 import Control.Concurrent (threadDelay)
-import Control.Monad      (void)
 import Data.Bits          ((.|.), shiftL)
 import Data.Char          (isAlphaNum, isAscii, isSpace, chr)
 import Data.IORef         (newIORef, readIORef, writeIORef)
 import Data.List          (intercalate)
 import Data.Word          (Word8)
-import System.Process     (system)
-import System.Info        (os)
-import Numeric            (showHex, showIntAtBase, showFFloat)
+import Numeric            (showHex, showIntAtBase)
 
 -- | Delay (wait) for the given number of milli-seconds
--- NB. The 'threadDelay' function is broken on Mac, see <http://hackage.haskell.org/trac/ghc/ticket/7299>
--- Until there's a new GHC release that fixes this issue, we temporarily use system/sleep on Mac.
 delay :: Int -> IO ()
-delay n
-  | os == "darwin"
-  = void $ system $ "sleep " ++ showFFloat (Just 2) (fromIntegral n / (1000 :: Double)) ""
-  | True
-  = threadDelay (n*1000)
+delay n = threadDelay (n*1000)
 
 -- | A simple printer that can keep track of sequence numbers. Used for debugging purposes.
 mkDebugPrinter :: Bool -> IO (String -> IO ())
