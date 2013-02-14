@@ -25,7 +25,7 @@ import System.Hardware.Arduino
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Blink.png>>
 blink :: IO ()
 blink = withArduino False "/dev/cu.usbmodemfd131" $ do
-           let led = pin 13
+           let led = dpin 13
            setPinMode led OUTPUT
            forever $ do digitalWrite led True
                         delay 1000

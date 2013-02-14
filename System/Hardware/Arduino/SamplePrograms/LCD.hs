@@ -49,14 +49,14 @@ import System.Hardware.Arduino.LCD
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/LCD.png>>
 hitachi :: LCDController
--- Connections:                   ARDUINO     Hitachi   Description
---------------------------------  -------    ---------  ----------------
-hitachi = Hitachi44780 { lcdRS   = pin 12  --     4      Register-select
-                       , lcdEN   = pin 11  --     6      Enable
-                       , lcdD4   = pin  5  --    11      Data 4
-                       , lcdD5   = pin  4  --    12      Data 5
-                       , lcdD6   = pin  3  --    13      Data 6
-                       , lcdD7   = pin  2  --    14      Data 7
+-- Connections:                    ARDUINO     Hitachi   Description
+--------------------------------   -------    ---------  ----------------
+hitachi = Hitachi44780 { lcdRS   = dpin 12  --     4      Register-select
+                       , lcdEN   = dpin 11  --     6      Enable
+                       , lcdD4   = dpin  5  --    11      Data 4
+                       , lcdD5   = dpin  4  --    12      Data 5
+                       , lcdD6   = dpin  3  --    13      Data 6
+                       , lcdD7   = dpin  2  --    14      Data 7
                        -- Other config variables for the display
                        , lcdRows     = 2    -- 2 rows
                        , lcdCols     = 16    -- of 16 columns

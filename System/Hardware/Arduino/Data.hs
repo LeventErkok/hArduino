@@ -47,9 +47,53 @@ instance Show Pin where
          | True   = "Pin"  ++ show i
    where i = pinNo p
 
--- | Declare a pin on the board by its number.
+-- | Anything that can be used as a pin on the Arduino.
+-- Typically, this is the digital and analog pins, but we
+-- keep it generic enough here for other other abstraction
+-- possibilities in the future.
+class BoardPin a where
+  mkPin :: a -> Pin
+
+-- | A digital pin kind
+data DigitalPin = Digital Word8 -- ^ The digital pin no. Use @0@ for @0@, @1@ for @1@ etc.
+
+instance BoardPin DigitalPin where
+  mkPin (Digital w) = Pin w
+
+-- | An analog pin kind
+data AnalogPin = Analog Word8 -- ^ The analog pin no. Use @0@ for @A0@, @1@ for @A1@ etc.
+
+instance BoardPin AnalogPin where
+  mkPin (Analog w) = Pin w
+
+-- | Declare a pin on the board. Note that most analog pins on Arduino boards can be used
+-- for digital purposes as well. Furthermore, pins can change their mode as the program
+-- runs, depending on user commands. The hArduino library itself keeps track of which
+-- pins are capable of what modes internally, so no confusion can arise. Therefore, the use
+-- of the functions 'pin', 'dpin', and 'apin' is more or less interchangable.
+--
+-- For clarity, the recommended declaration style is:
+--
+--   * Use 'dpin' if you intend to use the pin digitally.
+--
+--   * Use 'apin' if you intend to use the pin for analog purposes.
+--
+--   * Use 'pin' if you intend to use the pin for both modes, changing the mode
+--   during the execution of the program as necessary via 'setPinMode'.
 pin :: Word8 -> Pin
 pin = Pin
+
+-- | Declare a digital pin on the board. Use @0@ for @0@, @1@ for @1@ etc.
+--
+-- NB. See the notes for 'pin' regarding the naming schema for the pins on Arduino.
+dpin :: Word8 -> Pin
+dpin = mkPin . Digital
+
+-- | Declare an analog pin on the board. Use @0@ for @A0@, @1@ for @A1@ etc.
+--
+-- NB. See the notes for 'pin' regarding the naming schema for the pins on Arduino.
+apin :: Word8 -> Pin
+apin = mkPin . Analog
 
 -- | On the Arduino, pins are grouped into banks of 8.
 -- Given a pin, this function determines which port it belongs to
