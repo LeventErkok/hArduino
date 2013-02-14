@@ -33,7 +33,7 @@ analogVal = withArduino False "/dev/cu.usbmodemfd131" $ do
                liftIO $ print cur
                go cur
   where led = pin 13
-        pot = pin 17 -- NB. Analog-3 is pin 17 on the UNO
+        pot = pin 3
         go cur = do digitalWrite led True
                     delay cur
                     digitalWrite led False

@@ -20,7 +20,7 @@ import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
-import Data.Maybe                 (fromMaybe)
+import Data.Maybe                 (fromMaybe, listToMaybe)
 import Data.Word                  (Word8)
 import System.Hardware.Serialport (SerialPort)
 
@@ -422,3 +422,21 @@ getModeActions p ANALOG = do -- This pin just configured for analog
                     return (bst', acts1 ++ acts2)
 getModeActions _ OUTPUT = return []
 getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode: " ++ show m) ["On pin " ++ show p]
+
+-- | On the arduino, digital pin numbers are in 1-to-1 match with
+-- the board pins. However, ANALOG pins come at an offset, determined by
+-- the capabilities query. Users of the library refer to these pins
+-- simply by their natural numbers, which makes for portable programs
+-- between boards that have different number of digital pins. We adjust
+-- for this shift here.
+adjustPinNo :: Pin -> PinMode -> Arduino Pin
+adjustPinNo p m
+  | m /= ANALOG
+  = return p
+  | True
+  = do BoardCapabilities caps <- gets capabilities
+       case listToMaybe [realPin | (realPin, PinCapabilities{analogPinNumber = Just n}) <- M.toAscList caps, pinNo p == n] of
+         Nothing -> die ("hArduino: " ++ show p ++ " is not a valid analog-pin on this board.")
+                        -- Try to be helpful in case they are trying to use a large value thinking it needs to be offset
+                        ["Hint: To refer to analog pin number k, simply use 'pin k', not 'pin (k+noOfDigitalPins)'" | pinNo p > 13]
+         Just rp -> return rp

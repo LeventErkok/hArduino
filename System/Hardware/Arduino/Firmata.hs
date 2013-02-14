@@ -39,7 +39,8 @@ delay = liftIO . U.delay
 
 -- | Set the mode on a particular pin on the board
 setPinMode :: Pin -> PinMode -> Arduino ()
-setPinMode p m = do
+setPinMode p' m = do
+   p <- adjustPinNo p' m
    extras <- registerPinMode p m
    send $ SetPinMode p m
    mapM_ send extras
@@ -143,10 +144,11 @@ waitGeneric ps = do
 -- is 0V, and @1023@ if it is 5V, properly scaled. (See `setAnalogSamplingInterval` for
 -- sampling frequency.)
 analogRead :: Pin -> Arduino Int
-analogRead p = do
+analogRead p' = do
    -- first make sure we have this pin set as analog
+   p <- adjustPinNo p' ANALOG
    pd <- getPinData p
-   when (pinMode pd /= ANALOG) $ die ("Invalid analogRead call on pin " ++ show p)
+   when (pinMode pd /= ANALOG) $ die ("Invalid analogRead call on pin " ++ show p' ++ "(On board: " ++ show p ++ ")")
                                      [ "The current mode for this pin is: " ++ show (pinMode pd)
                                      , "For analogRead, it must be set to: " ++ show ANALOG
                                      , "via a proper call to setPinMode"
