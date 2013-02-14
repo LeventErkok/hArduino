@@ -28,7 +28,7 @@ module System.Hardware.Arduino (
   -- ** Basic handshake with the board
   , queryFirmware
   -- ** Accessing pins
-  , pin, Pin, PinMode(..), setPinMode
+  , pin, dpin, apin, Pin, PinMode(..), setPinMode
   -- ** Digital I/O
   -- *** Writing digital values
   , digitalWrite
