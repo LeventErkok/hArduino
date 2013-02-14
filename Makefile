@@ -4,7 +4,6 @@
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
 TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs')
-LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_hArduino.hs)
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_hArduino.hs)
 CABAL     = cabal
 TIME      = /usr/bin/time
@@ -45,7 +44,7 @@ release: clean install sdist hlint test docs
 
 hlint: install
 	@echo "Running HLint.."
-	@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
+	@hlint System -rhlintReport.html -i "Use otherwise" -i "Parse error"
 
 tags:
 	$(call mkTags)
