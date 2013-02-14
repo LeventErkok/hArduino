@@ -60,7 +60,6 @@ withArduino verbose fp program =
                                        if initOK
                                           then program
                                           else error "Communication time-out (5s) expired."
-                                       program
            handle (\(e::SomeException) -> do cleanUp listenerTid
                                              let selfErr = "*** hArduino" `isInfixOf` show e
                                              hPutStrLn stderr $ if selfErr
