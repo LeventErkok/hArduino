@@ -3,6 +3,15 @@
 
 * Latest Hackage released version: 0.3
 
+### Version 0.4, Not yet released
+ 
+ * Bugfix: Remove spurious extra call to user program
+ * Rework pin assignment logic, making use of analog/digital
+   pins much more clearer.
+ * Better exception handling
+ * Remove threadDelay workaround on the Mac. NB. If you are
+   running on OSX, then you need at least GHC 7.6.2!
+
 ### Version 0.3, 2013-02-10
 
  * Library
