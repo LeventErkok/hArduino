@@ -20,6 +20,7 @@ import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit, (.&.))
 import Data.List            (intercalate)
 import Data.Maybe           (listToMaybe)
+import Data.Word            (Word8)
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
 import System.Timeout       (timeout)
 import System.IO            (stderr, hPutStrLn)
@@ -147,10 +148,11 @@ setupListener = do
                            Right nonSysEx    -> unpackageNonSysEx getBytes nonSysEx
                 case resp of
                   Unimplemented{}      -> dbg $ "Ignoring the received response: " ++ show resp
+                  -- NB. When Firmata sends back AnalogMessage, it uses the number in A0-A1-A2, etc., i.e., 0-1-2; which we
+                  -- need to properly interpret in our own pin mapping schema, where analogs come after digitals.
                   AnalogMessage mp l h -> modifyMVar_ bs $ \bst ->
-                                           do -- the mp is indexed at 0; need to find the mapping
-                                              let BoardCapabilities caps = boardCapabilities bst
-                                                  mbP = listToMaybe [mappedPin | (mappedPin, (Just mp', _)) <- M.assocs caps, pinNo mp == mp']
+                                           do let BoardCapabilities caps = boardCapabilities bst
+                                                  mbP = listToMaybe [mappedPin | (mappedPin, PinCapabilities{analogPinNumber = Just mp'}) <- M.assocs caps, pinNo mp == mp']
                                               case mbP of
                                                 Nothing -> return bst -- Mapping hasn't happened yet
                                                 Just p  -> do
@@ -229,11 +231,12 @@ initialize ltid = do
                                         else do liftIO $ dbg $ "Skipping unexpected response: " ++ show resp
                                                 wait
            wait
-       mapAnalog bs p c
+       mapAnalog :: [Word8] -> Pin -> PinCapabilities -> PinCapabilities
+       mapAnalog as p c
           | i < rl && m /= 0x7f
-          = (Just m, snd c)
+          = c{analogPinNumber = Just m}
           | True             -- out-of-bounds, or not analog; ignore
           = c
-         where rl = length bs
+         where rl = length as
                i  = fromIntegral (pinNo p)
-               m  = bs !! i
+               m  = as !! i

@@ -104,17 +104,18 @@ instance Show Response where
 type Resolution = Word8
 
 -- | Capabilities of a pin
-type PinCapabilities  = ( Maybe Word8               -- Analog pin number, if any
-                        , [(PinMode, Resolution)]
-                        )
+data PinCapabilities  = PinCapabilities {
+                          analogPinNumber :: Maybe Word8              -- ^ Analog pin number, if any
+                        , allowedModes    :: [(PinMode, Resolution)]  -- ^ Allowed modes and resolutions
+                        }
 
 -- | What the board is capable of and current settings
 newtype BoardCapabilities = BoardCapabilities (M.Map Pin PinCapabilities)
 
 instance Show BoardCapabilities where
   show (BoardCapabilities m) = intercalate "\n" (map sh (M.toAscList m))
-    where sh (p, (mbA, pc)) = show p ++ sep ++ unwords [show md | (md, _) <- pc]
-             where sep = maybe ": " (\i -> "[A" ++ show i ++ "]: ") mbA
+    where sh (p, PinCapabilities{analogPinNumber, allowedModes}) = show p ++ sep ++ unwords [show md | (md, _) <- allowedModes]
+             where sep = maybe ": " (\i -> "[A" ++ show i ++ "]: ") analogPinNumber
 
 -- | Data associated with a pin
 data PinData = PinData {
@@ -192,8 +193,8 @@ getPinModes :: Pin -> Arduino [PinMode]
 getPinModes p = do
   BoardCapabilities caps <- gets capabilities
   case p `M.lookup` caps of
-    Nothing      -> return []
-    Just (_, ps) -> return (map fst ps)
+    Nothing                            -> return []
+    Just PinCapabilities{allowedModes} -> return $ map fst allowedModes
 
 -- | Current state of the pin
 getPinData :: Pin -> Arduino PinData
@@ -350,10 +351,10 @@ registerPinMode p m = do
           Nothing
              -> die ("Invalid access to unsupported pin: " ++ show p)
                     ("Available pins are: " : ["  " ++ show k | (k, _) <- M.toAscList caps])
-          Just (_, ms)
-            | m `notElem` map fst ms
+          Just PinCapabilities{allowedModes}
+            | m `notElem` map fst allowedModes
             -> die ("Invalid mode " ++ show m ++ " set for " ++ show p)
-                   ["Supported modes for this pin are: " ++ unwords (if null ms then ["NONE"] else map show ms)]
+                   ["Supported modes for this pin are: " ++ unwords (if null allowedModes then ["NONE"] else map show allowedModes)]
           _ -> return ()
         -- see if there was a mode already set for this pin
         bs  <- gets boardState
