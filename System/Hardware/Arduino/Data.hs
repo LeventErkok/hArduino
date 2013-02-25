@@ -40,9 +40,10 @@ instance Show Port where
 -- | A pin on the Arduino, as specified by the user via 'pin', 'digital', and 'analog' functions.
 data Pin = DigitalPin Word8
          | AnalogPin  Word8
-         deriving (Eq, Ord)
+         | MixedPin   Word8
 
 instance Show Pin where
+  show (MixedPin w)   = "Pin"  ++ show w
   show (DigitalPin w) = "DPin" ++ show w
   show (AnalogPin  w) = "APin" ++ show w
 
@@ -53,25 +54,30 @@ data IPin = InternalPin { pinNo :: Word8 }
 instance Show IPin where
   show (InternalPin w) = "IPin" ++ show w
 
--- | Declare a pin by its index. Such a pin will be used directly by
--- its given index, and thus is *not* guaranteed to be portable between
--- boards that have differing number of digital/analog pins. (For instance,
--- from Arduino Uno to Arduino Mega.) Users should prefer 'digital', and
--- 'analog' instead, which will internally be mapped to the correct pins
--- on the board being used at run-time, based on board capabilities. However,
--- use of 'pin' can be handy for cases when we do know precisely which pin
--- we are referring to, and also when a pin is used both for digital and
--- analog modes interchangeably.
+-- | Declare a pin by its index. For maximum portability, prefer 'digital'
+-- and 'analog' functions, which will adjust pin indexes properly based on
+-- which board the program is running on at run-time, as Arduino boards
+-- differ in their pin numbers. This function is provided for cases where
+-- a pin is used in mixed-mode, i.e., both for digital and analog purposes,
+-- as Arduino does not really distinguish pin usage. In these cases, the
+-- user has the proof obligation to make sure that the index used is supported
+-- on the board with appropriate capabilities.
 pin :: Word8 -> Pin
-pin = DigitalPin
+pin = MixedPin
 
--- | Declare an digital pin on the board. The index given by the user
--- will be used unchanged.
+-- | Declare an digital pin on the board. For instance, to refer to digital pin no 12
+-- use 'digital' @12@.
 digital :: Word8 -> Pin
 digital = DigitalPin
 
--- | Declare an analog pin on the board. The index given by the user
--- will be adjusted internally to map to the correct analog pin.
+-- | Declare an analog pin on the board. For instance, to refer to analog pin no 0
+-- simply use 'analog' @0@.
+--
+-- Note that 'analog' @0@ on an Arduino UNO will be appropriately adjusted
+-- internally to refer to pin 14, since UNO has 13 digital pins, while on an
+-- Arduino MEGA, it will refer to internal pin 55, since MEGA has 54 digital pins;
+-- and similarly for other boards depending on their capabilities.
+-- (Also see the note on 'pin' for pin mappings.)
 analog :: Word8 -> Pin
 analog = AnalogPin
 
@@ -454,6 +460,7 @@ getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode:
 -- between boards that have different number of digital pins. We adjust
 -- for this shift here.
 convertToInternalPin :: Pin -> Arduino IPin
+convertToInternalPin (MixedPin p)   = return $ InternalPin p
 convertToInternalPin (DigitalPin p) = return $ InternalPin p
 convertToInternalPin (AnalogPin p)
   = do BoardCapabilities caps <- gets capabilities
