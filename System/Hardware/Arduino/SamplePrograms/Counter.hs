@@ -31,9 +31,9 @@ counter = withArduino False "/dev/cu.usbmodemfd131" $ do
             setPinMode bUp   INPUT
             setPinMode bDown INPUT
             update (0::Int)
- where bUp   = dpin 4
-       bDown = dpin 2
-       led   = dpin 13
+ where bUp   = digital 4
+       bDown = digital 2
+       led   = digital 13
        update curVal = do
                 liftIO $ print curVal
                 digitalWrite led (curVal == 0)

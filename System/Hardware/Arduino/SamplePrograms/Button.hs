@@ -31,8 +31,8 @@ button = withArduino False "/dev/cu.usbmodemfd131" $ do
             setPinMode led OUTPUT
             setPinMode pb  INPUT
             go =<< digitalRead pb
- where pb   = dpin 2
-       led  = dpin 13
+ where pb   = digital 2
+       led  = digital 13
        go s = do liftIO $ putStrLn $ "Button is currently " ++ if s then "ON" else "OFF"
                  digitalWrite led s
                  go =<< waitFor pb

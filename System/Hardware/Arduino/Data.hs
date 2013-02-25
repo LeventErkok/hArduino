@@ -47,53 +47,27 @@ instance Show Pin where
          | True   = "Pin"  ++ show i
    where i = pinNo p
 
--- | Anything that can be used as a pin on the Arduino.
--- Typically, this is the digital and analog pins, but we
--- keep it generic enough here for other other abstraction
--- possibilities in the future.
-class BoardPin a where
-  mkPin :: a -> Pin
-
--- | A digital pin kind
-data DigitalPin = Digital Word8 -- ^ The digital pin no. Use @0@ for @0@, @1@ for @1@ etc.
-
-instance BoardPin DigitalPin where
-  mkPin (Digital w) = Pin w
-
--- | An analog pin kind
-data AnalogPin = Analog Word8 -- ^ The analog pin no. Use @0@ for @A0@, @1@ for @A1@ etc.
-
-instance BoardPin AnalogPin where
-  mkPin (Analog w) = Pin w
-
--- | Declare a pin on the board. Note that most analog pins on Arduino boards can be used
--- for digital purposes as well. Furthermore, pins can change their mode as the program
--- runs, depending on user commands. The hArduino library itself keeps track of which
--- pins are capable of what modes internally, so no confusion can arise. Therefore, the use
--- of the functions 'pin', 'dpin', and 'apin' is more or less interchangable.
---
--- For clarity, the recommended declaration style is:
---
---   * Use 'dpin' if you intend to use the pin digitally.
---
---   * Use 'apin' if you intend to use the pin for analog purposes.
---
---   * Use 'pin' if you intend to use the pin for both modes, changing the mode
---   during the execution of the program as necessary via 'setPinMode'.
+-- | Declara a pin by its index. Such a pin will be used directly by
+-- its given index, and thus is *not* guaranteed to be portable between
+-- boards that have differing number of digital/analog pins. (For instance,
+-- from Arduino Uno to Arduino Mega.) Users should prefer 'digital', and
+-- 'analog' instead, which will internally be mapped to the correct pins
+-- on the board being used at run-time, based on board capabilities. However,
+-- use of 'pin' can be handy for cases when we do know precisely which pin
+-- we are referring to, and also when a pin is used both for digital and
+-- analog modes interchangeably.
 pin :: Word8 -> Pin
 pin = Pin
 
--- | Declare a digital pin on the board. Use @0@ for @0@, @1@ for @1@ etc.
---
--- NB. See the notes for 'pin' regarding the naming schema for the pins on Arduino.
-dpin :: Word8 -> Pin
-dpin = mkPin . Digital
+-- | Declare an digital pin on the board. The index given by the user
+-- will be used unchanged.
+digital :: Word8 -> Pin
+digital = Pin
 
--- | Declare an analog pin on the board. Use @0@ for @A0@, @1@ for @A1@ etc.
---
--- NB. See the notes for 'pin' regarding the naming schema for the pins on Arduino.
-apin :: Word8 -> Pin
-apin = mkPin . Analog
+-- | Declare an analog pin on the board. The index given by the user
+-- will be adjusted internally to map to the correct analog pin.
+analog :: Word8 -> Pin
+analog = Pin
 
 -- | On the Arduino, pins are grouped into banks of 8.
 -- Given a pin, this function determines which port it belongs to
