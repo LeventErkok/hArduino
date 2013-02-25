@@ -233,7 +233,7 @@ initialize ltid = do
                                         else do liftIO $ dbg $ "Skipping unexpected response: " ++ show resp
                                                 wait
            wait
-       mapAnalog :: [Word8] -> Pin -> PinCapabilities -> PinCapabilities
+       mapAnalog :: [Word8] -> IPin -> PinCapabilities -> PinCapabilities
        mapAnalog as p c
           | i < rl && m /= 0x7f
           = c{analogPinNumber = Just m}

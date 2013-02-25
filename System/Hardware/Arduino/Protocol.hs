@@ -57,7 +57,8 @@ unpackageSysEx (cmdWord:args)
   = Unimplemented Nothing (cmdWord : args)
 
 getCapabilities :: [Word8] -> BoardCapabilities
-getCapabilities bs = BoardCapabilities $ M.fromList $ zipWith (\p c -> (p, PinCapabilities{analogPinNumber = Nothing, allowedModes = c})) (map Pin [(0::Word8)..]) (map pinCaps (chunk bs))
+getCapabilities bs = BoardCapabilities $ M.fromList $ zipWith (\p c -> (p, PinCapabilities{analogPinNumber = Nothing, allowedModes = c}))
+                                                              (map InternalPin [(0::Word8)..]) (map pinCaps (chunk bs))
   where chunk xs = case break (== 0x7f) xs of
                      ([], [])         -> []
                      (cur, 0x7f:rest) -> cur : chunk rest

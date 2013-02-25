@@ -37,17 +37,23 @@ data Port = Port { portNo :: Word8  -- ^ The port number
 instance Show Port where
   show p = "Port" ++ show (portNo p)
 
--- | A pin on the Arduino
-data Pin = Pin { pinNo :: Word8   -- ^ The pin number
-               }
+-- | A pin on the Arduino, as specified by the user via 'pin', 'digital', and 'analog' functions.
+data Pin = DigitalPin Word8
+         | AnalogPin  Word8
          deriving (Eq, Ord)
 
 instance Show Pin where
-  show p | i < 10 = "Pin0" ++ show i
-         | True   = "Pin"  ++ show i
-   where i = pinNo p
+  show (DigitalPin w) = "DPin" ++ show w
+  show (AnalogPin  w) = "APin" ++ show w
 
--- | Declara a pin by its index. Such a pin will be used directly by
+-- | A pin on the Arduino, as viewed by the library; i.e., real-pin numbers
+data IPin = InternalPin { pinNo :: Word8 }
+          deriving (Eq, Ord)
+
+instance Show IPin where
+  show (InternalPin w) = "IPin" ++ show w
+
+-- | Declare a pin by its index. Such a pin will be used directly by
 -- its given index, and thus is *not* guaranteed to be portable between
 -- boards that have differing number of digital/analog pins. (For instance,
 -- from Arduino Uno to Arduino Mega.) Users should prefer 'digital', and
@@ -57,26 +63,26 @@ instance Show Pin where
 -- we are referring to, and also when a pin is used both for digital and
 -- analog modes interchangeably.
 pin :: Word8 -> Pin
-pin = Pin
+pin = DigitalPin
 
 -- | Declare an digital pin on the board. The index given by the user
 -- will be used unchanged.
 digital :: Word8 -> Pin
-digital = Pin
+digital = DigitalPin
 
 -- | Declare an analog pin on the board. The index given by the user
 -- will be adjusted internally to map to the correct analog pin.
 analog :: Word8 -> Pin
-analog = Pin
+analog = AnalogPin
 
 -- | On the Arduino, pins are grouped into banks of 8.
 -- Given a pin, this function determines which port it belongs to
-pinPort :: Pin -> Port
+pinPort :: IPin -> Port
 pinPort p = Port (pinNo p `quot` 8)
 
 -- | On the Arduino, pins are grouped into banks of 8.
 -- Given a pin, this function determines which index it belongs to in its port
-pinPortIndex :: Pin -> Word8
+pinPortIndex :: IPin -> Word8
 pinPortIndex p = pinNo p `rem` 8
 
 -- | The mode for a pin.
@@ -94,9 +100,9 @@ data Request = SystemReset                          -- ^ Send system reset
              | QueryFirmware                        -- ^ Query the Firmata version installed
              | CapabilityQuery                      -- ^ Query the capabilities of the board
              | AnalogMappingQuery                   -- ^ Query the mapping of analog pins
-             | SetPinMode         Pin  PinMode      -- ^ Set the mode on a pin
+             | SetPinMode         IPin PinMode      -- ^ Set the mode on a pin
              | DigitalReport      Port Bool         -- ^ Digital report values on port enable/disable
-             | AnalogReport       Pin  Bool         -- ^ Analog report values on pin enable/disable
+             | AnalogReport       IPin Bool         -- ^ Analog report values on pin enable/disable
              | DigitalPortWrite   Port Word8 Word8  -- ^ Set the values on a port digitally
              | SamplingInterval   Word8 Word8       -- ^ Set the sampling interval
              deriving Show
@@ -106,7 +112,7 @@ data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/
               | Capabilities BoardCapabilities       -- ^ Capabilities report
               | AnalogMapping [Word8]                -- ^ Analog pin mappings
               | DigitalMessage Port Word8 Word8      -- ^ Status of a port
-              | AnalogMessage  Pin  Word8 Word8      -- ^ Status of an analog pin
+              | AnalogMessage  IPin Word8 Word8      -- ^ Status of an analog pin
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
@@ -128,7 +134,7 @@ data PinCapabilities  = PinCapabilities {
                         }
 
 -- | What the board is capable of and current settings
-newtype BoardCapabilities = BoardCapabilities (M.Map Pin PinCapabilities)
+newtype BoardCapabilities = BoardCapabilities (M.Map IPin PinCapabilities)
 
 instance Show BoardCapabilities where
   show (BoardCapabilities m) = intercalate "\n" (map sh (M.toAscList m))
@@ -172,12 +178,12 @@ data LCDData = LCDData {
 
 -- | State of the board
 data BoardState = BoardState {
-                    boardCapabilities    :: BoardCapabilities  -- ^ Capabilities of the board
-                  , analogReportingPins  :: S.Set Pin          -- ^ Which analog pins are reporting
-                  , digitalReportingPins :: S.Set Pin          -- ^ Which digital pins are reporting
-                  , pinStates            :: M.Map Pin PinData  -- ^ For-each pin, store its data
-                  , digitalWakeUpQueue   :: [MVar ()]          -- ^ Semaphore list to wake-up upon receiving a digital message
-                  , lcds                 :: M.Map LCD LCDData  -- ^ LCD's attached to the board
+                    boardCapabilities    :: BoardCapabilities   -- ^ Capabilities of the board
+                  , analogReportingPins  :: S.Set IPin          -- ^ Which analog pins are reporting
+                  , digitalReportingPins :: S.Set IPin          -- ^ Which digital pins are reporting
+                  , pinStates            :: M.Map IPin PinData  -- ^ For-each pin, store its data
+                  , digitalWakeUpQueue   :: [MVar ()]           -- ^ Semaphore list to wake-up upon receiving a digital message
+                  , lcds                 :: M.Map LCD LCDData   -- ^ LCD's attached to the board
                   }
 
 -- | State of the computation
@@ -207,7 +213,7 @@ die m ms = do f <- gets bailOut
               liftIO $ f m ms
 
 -- | Which modes does this pin support?
-getPinModes :: Pin -> Arduino [PinMode]
+getPinModes :: IPin -> Arduino [PinMode]
 getPinModes p = do
   BoardCapabilities caps <- gets capabilities
   case p `M.lookup` caps of
@@ -215,7 +221,7 @@ getPinModes p = do
     Just PinCapabilities{allowedModes} -> return $ map fst allowedModes
 
 -- | Current state of the pin
-getPinData :: Pin -> Arduino PinData
+getPinData :: IPin -> Arduino PinData
 getPinData p = do
   bs  <- gets boardState
   err <- gets bailOut
@@ -233,7 +239,7 @@ getPinData p = do
 --   * Second msb: pins 7-13 on the port
 --
 -- In particular, the result is suitable to be sent with a digital message
-computePortData :: Pin -> Bool -> Arduino (Word8, Word8)
+computePortData :: IPin -> Bool -> Arduino (Word8, Word8)
 computePortData curPin newValue = do
   let curPort  = pinPort curPin
   let curIndex = pinPortIndex curPin
@@ -257,9 +263,9 @@ digitalWakeUp semaphore = do
     liftIO $ modifyMVar_ bs $ \bst -> return bst{digitalWakeUpQueue = semaphore : digitalWakeUpQueue bst}
 
 -- | Firmata commands, see: http://firmata.org/wiki/Protocol#Message_Types
-data FirmataCmd = ANALOG_MESSAGE      Pin  -- ^ @0xE0@ pin
+data FirmataCmd = ANALOG_MESSAGE      IPin -- ^ @0xE0@ pin
                 | DIGITAL_MESSAGE     Port -- ^ @0x90@ port
-                | REPORT_ANALOG_PIN   Pin  -- ^ @0xC0@ pin
+                | REPORT_ANALOG_PIN   IPin -- ^ @0xC0@ pin
                 | REPORT_DIGITAL_PORT Port -- ^ @0xD0@ port
                 | START_SYSEX              -- ^ @0xF0@
                 | SET_PIN_MODE             -- ^ @0xF4@
@@ -290,9 +296,9 @@ getFirmataCmd w = classify
                  | w == 0xF7              = Right END_SYSEX
                  | w == 0xF9              = Right PROTOCOL_VERSION
                  | w == 0xFF              = Right SYSTEM_RESET
-                 | Just i <- extract 0xE0 = Right $ ANALOG_MESSAGE      (Pin i)
+                 | Just i <- extract 0xE0 = Right $ ANALOG_MESSAGE      (InternalPin i)
                  | Just i <- extract 0x90 = Right $ DIGITAL_MESSAGE     (Port i)
-                 | Just i <- extract 0xC0 = Right $ REPORT_ANALOG_PIN   (Pin i)
+                 | Just i <- extract 0xC0 = Right $ REPORT_ANALOG_PIN   (InternalPin i)
                  | Just i <- extract 0xD0 = Right $ REPORT_DIGITAL_PORT (Port i)
                  | True                   = Left w
 
@@ -361,7 +367,7 @@ getSysExCommand 0x7F = Right SYSEX_REALTIME
 getSysExCommand n    = Left n
 
 -- | Keep track of pin-mode changes
-registerPinMode :: Pin -> PinMode -> Arduino [Request]
+registerPinMode :: IPin -> PinMode -> Arduino [Request]
 registerPinMode p m = do
         -- first check that the requested mode is supported for this pin
         BoardCapabilities caps <- gets capabilities
@@ -392,7 +398,7 @@ registerPinMode p m = do
                                   return $ remActs ++ addActs
 
 -- | A mode was removed from this pin, update internal state and determine any necessary actions to remove it
-getRemovalActions :: Pin -> PinMode -> Arduino [Request]
+getRemovalActions :: IPin -> PinMode -> Arduino [Request]
 getRemovalActions p INPUT  = do -- This pin is no longer digital input
         bs <- gets boardState
         liftIO $ modifyMVar bs $ \bst -> do
@@ -413,7 +419,7 @@ getRemovalActions p m = die ("hArduino: getRemovalActions: TBD: Unsupported mode
 
 -- | Depending on a mode-set call, determine what further
 -- actions should be executed, such as enabling/disabling pin/port reporting
-getModeActions :: Pin -> PinMode -> Arduino [Request]
+getModeActions :: IPin -> PinMode -> Arduino [Request]
 getModeActions p INPUT  = do -- This pin is just configured for digital input
         bs <- gets boardState
         liftIO $ modifyMVar bs $ \bst -> do
@@ -447,14 +453,12 @@ getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode:
 -- simply by their natural numbers, which makes for portable programs
 -- between boards that have different number of digital pins. We adjust
 -- for this shift here.
-adjustPinNo :: Pin -> PinMode -> Arduino Pin
-adjustPinNo p m
-  | m /= ANALOG
-  = return p
-  | True
+convertToInternalPin :: Pin -> Arduino IPin
+convertToInternalPin (DigitalPin p) = return $ InternalPin p
+convertToInternalPin (AnalogPin p)
   = do BoardCapabilities caps <- gets capabilities
-       case listToMaybe [realPin | (realPin, PinCapabilities{analogPinNumber = Just n}) <- M.toAscList caps, pinNo p == n] of
+       case listToMaybe [realPin | (realPin, PinCapabilities{analogPinNumber = Just n}) <- M.toAscList caps, p == n] of
          Nothing -> die ("hArduino: " ++ show p ++ " is not a valid analog-pin on this board.")
                         -- Try to be helpful in case they are trying to use a large value thinking it needs to be offset
-                        ["Hint: To refer to analog pin number k, simply use 'pin k', not 'pin (k+noOfDigitalPins)'" | pinNo p > 13]
+                        ["Hint: To refer to analog pin number k, simply use 'pin k', not 'pin (k+noOfDigitalPins)'" | p > 13]
          Just rp -> return rp

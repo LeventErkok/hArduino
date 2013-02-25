@@ -40,15 +40,16 @@ delay = liftIO . U.delay
 -- | Set the mode on a particular pin on the board
 setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p' m = do
-   p <- adjustPinNo p' m
+   p <- convertToInternalPin p'
    extras <- registerPinMode p m
    send $ SetPinMode p m
    mapM_ send extras
 
 -- | Set or clear a digital pin on the board
 digitalWrite :: Pin -> Bool -> Arduino ()
-digitalWrite p v = do
+digitalWrite p' v = do
    -- first make sure we have this pin set as output
+   p <- convertToInternalPin p'
    pd <- getPinData p
    when (pinMode pd /= OUTPUT) $ die ("Invalid digitalWrite call on pin " ++ show p)
                                        [ "The current mode for this pin is: " ++ show (pinMode pd)
@@ -62,8 +63,9 @@ digitalWrite p v = do
 
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
-pullUpResistor p v = do
+pullUpResistor p' v = do
    -- first make sure we have this pin set as input
+   p <- convertToInternalPin p'
    pd <- getPinData p
    when (pinMode pd /= INPUT) $ die ("Invalid turnOnPullUpResistor call on pin " ++ show p)
                                       [ "The current mode for this pin is: " ++ show (pinMode pd)
@@ -77,8 +79,9 @@ pullUpResistor p v = do
 -- the current value immediately. See 'waitFor' for a version that waits for a change
 -- in the pin first.
 digitalRead :: Pin -> Arduino Bool
-digitalRead p = do
+digitalRead p' = do
    -- first make sure we have this pin set as input
+   p <- convertToInternalPin p'
    pd <- getPinData p
    when (pinMode pd /= INPUT) $ die ("Invalid digitalRead call on pin " ++ show p)
                                       [ "The current mode for this pin is: " ++ show (pinMode pd)
@@ -146,7 +149,7 @@ waitGeneric ps = do
 analogRead :: Pin -> Arduino Int
 analogRead p' = do
    -- first make sure we have this pin set as analog
-   p <- adjustPinNo p' ANALOG
+   p <- convertToInternalPin p'
    pd <- getPinData p
    when (pinMode pd /= ANALOG) $ die ("Invalid analogRead call on pin " ++ show p' ++ "(On board: " ++ show p ++ ")")
                                      [ "The current mode for this pin is: " ++ show (pinMode pd)
