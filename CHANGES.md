@@ -5,14 +5,14 @@
 
 ### Version 0.4, Not yet released
  
- * Library
-    * New functions:
-        * pulseIn: Measure the length of a pulse, with timeout
-	* time: Measure the time taken by an Arduino action
-	* timeOut: Run an action only for the given-time-out
+ * New functions:
+     * pulseIn: Measure the length of a pulse, with timeout
+     * time: Measure the time taken by an Arduino action
+     * timeOut: Run an action only for the given-time-out
 
- * Sample programs
+ * Examples
     * Pulse: Demonstrates the use of pulse-reading
+    * Distance: Demonstrates the use of 
 
  * Other:
     * Bugfix: Remove spurious extra call to user program
@@ -30,20 +30,26 @@
     * Add support for reading analog values and setting sampling frequency.
     * Add support for LCDs (based on the Hitachi 44780 chip)
     * Better handling for Ctrl-C interrupts
+
  * Examples
-    * Add counter: use push buttons to count up and down
-    * Add analog-reading example
-    * Add LCD controller example
-    * Add wiring schematics for all sample programs
+    * Counter: Use push buttons to count up and down
+    * Analog: Reading analog values
+    * LCD: Control an LCD, writing text/glyphs etc
 
 ### Version 0.2, 2013-01-28
 
- * Rewrite the communication engine
- * Digital input/output implementation
- * Add switch example
+ * Library
+    * Rewrite the communication engine
+    * Digital input/output implementation
+
+ * Examples
+    * Button: Detecting putton pushes
 
 ### Version 0.1, 2013-01-14
 
- * Initial design
- * Blink example operational
- * Created home page at: http://leventerkok.github.com/hArduino 
+ * Library
+    * Initial design
+    * Created home page at: http://leventerkok.github.com/hArduino 
+
+ * Examples
+    * Blink: Hello world!
