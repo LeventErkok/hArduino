@@ -12,7 +12,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Firmata where
 
-import Control.Concurrent  (newEmptyMVar, readMVar)
+import Control.Concurrent  (newEmptyMVar, readMVar, threadDelay)
 import Control.Monad       (when, unless, void)
 import Control.Monad.State (StateT(..))
 import Control.Monad.Trans (liftIO)
@@ -89,7 +89,14 @@ digitalWrite p' v = do
 
 -- | Send a pulse-out on a digital-pin for the given number of micro-seconds
 pulseOut :: Pin -> Bool -> Int -> Arduino ()
-pulseOut _ _ _ = return ()
+pulseOut p' v d
+  | d <= 0 = return ()
+  | True   = do p <- convertToInternalPin p'
+                writeThrough p v
+                liftIO $ threadDelay d
+                writeThrough p (not v)
+  where writeThrough p val = do (lsb, msb) <- computePortData p val
+                                send $ DigitalPortWrite (pinPort p) lsb msb
 
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
