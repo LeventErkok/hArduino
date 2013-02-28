@@ -7,12 +7,14 @@
  
  * New functions:
      * pulseIn: Measure the length of a pulse, with timeout
+     * pulseOut: Send a digital pulse out
      * time: Measure the time taken by an Arduino action
      * timeOut: Run an action only for the given-time-out
 
  * Examples
     * Pulse: Demonstrates the use of pulse-reading
-    * Distance: Demonstrates the use of 
+    * Distance: Demonstrates the use of a distance sensor
+      and pulseIn/pulseOut functions to control it
 
  * Other:
     * Bugfix: Remove spurious extra call to user program

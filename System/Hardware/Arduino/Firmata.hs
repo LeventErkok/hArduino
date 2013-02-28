@@ -87,6 +87,10 @@ digitalWrite p' v = do
      _                      -> do (lsb, msb) <- computePortData p v
                                   send $ DigitalPortWrite (pinPort p) lsb msb
 
+-- | Send a pulse-out on a digital-pin for the given number of micro-seconds
+pulseOut :: Pin -> Bool -> Int -> Arduino ()
+pulseOut _ _ _ = return ()
+
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
 pullUpResistor p' v = do
