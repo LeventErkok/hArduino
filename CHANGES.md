@@ -5,12 +5,22 @@
 
 ### Version 0.4, Not yet released
  
- * Bugfix: Remove spurious extra call to user program
- * Rework pin assignment logic, making use of analog/digital
-   pins much more clearer.
- * Better exception handling
- * Remove threadDelay workaround on the Mac. NB. If you are
-   running on OSX, then you need at least GHC 7.6.2!
+ * Library
+    * New functions:
+        * pulseIn: Measure the length of a pulse, with timeout
+	* time: Measure the time taken by an Arduino action
+	* timeOut: Run an action only for the given-time-out
+
+ * Sample programs
+    * Pulse: Demonstrates the use of pulse-reading
+
+ * Other:
+    * Bugfix: Remove spurious extra call to user program
+    * Rework pin assignment logic, making use of analog/digital
+      pins much more clearer.
+    * Better exception handling
+    * Remove threadDelay workaround on the Mac. NB. If you are
+      running on OSX, then you need at least GHC 7.6.2!
 
 ### Version 0.3, 2013-02-10
 

@@ -14,12 +14,17 @@ module System.Hardware.Arduino.Firmata where
 
 import Control.Concurrent  (newEmptyMVar, readMVar)
 import Control.Monad       (when, unless, void)
+import Control.Monad.State (StateT(..))
 import Control.Monad.Trans (liftIO)
 import Data.Bits           ((.&.), shiftR)
 import Data.Word           (Word8)
 
+import Data.Time      (getCurrentTime, utctDayTime)
+import System.Timeout (timeout)
+
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Comm
+
 import qualified System.Hardware.Arduino.Utils as U
 
 -- | Retrieve the Firmata firmware version running on the Arduino. The first
@@ -36,6 +41,27 @@ queryFirmware = do
 -- | Delay the computaton for a given number of milli-seconds
 delay :: Int -> Arduino ()
 delay = liftIO . U.delay
+
+-- | Time a given action, result is measured in micro-seconds.
+time :: Arduino a -> Arduino (Int, a)
+time a = do start <- tick
+            r     <- a
+            end   <- r `seq` tick
+            return (toMicroSeconds (end - start), r)
+ where -- tick gets the current time in picoseconds
+       tick = do t <- liftIO $ utctDayTime `fmap` getCurrentTime
+                 let precision = 1000000000000 :: Integer
+                 return . round . (fromIntegral precision *) . toRational $ t
+       toMicroSeconds :: Integer -> Int
+       toMicroSeconds t = fromIntegral $ t `quot` 1000000
+
+-- | Time-out a given action. Time-out amount is in micro-seconds.
+timeOut :: Int -> Arduino a -> Arduino (Maybe a)
+timeOut to (Arduino (StateT f)) = Arduino (StateT (\st -> do
+        mbRes <- timeout to (f st)
+        case mbRes of
+          Nothing       -> return (Nothing, st)
+          Just (a, st') -> return (Just a,  st')))
 
 -- | Set the mode on a particular pin on the board
 setPinMode :: Pin -> PinMode -> Arduino ()
@@ -141,6 +167,33 @@ waitGeneric ps = do
                     then wait
                     else return $ zip curVals newVals
    wait
+
+-- | Measure how long a pin stays the required value, with a potential time-out. The call @pulseIn p v to@
+-- does the following:
+--
+--   * Waits until pin @p@ has value @v@. (If pin already has value @v@ then there's no wait.)
+--
+--   * Waits until pin @p@ has value @not v@.
+--
+--   * Returns, in micro-seconds, the duration the pin stayed @v@.
+--
+-- Time-out parameter is used as follows:
+--
+--    * If @to@ is @Nothing@, then 'pulseIn' will wait until the pin attains the value required and so long as it holds it.
+-- 
+--    * If @to@ is @Just t@ then, 'pulseIn' will stop if the above procedure does not complete within the given micro-seconds.
+--    In this case, the overall return value is @Nothing@.
+--
+-- NB. Both the time-out value and the return value are given in micro-seconds.
+pulseIn :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
+pulseIn p v mbTo = case mbTo of
+                    Nothing -> Just `fmap` pulse
+                    Just to -> timeOut to pulse
+  where waitTill f = do curVal <- digitalRead p
+                        unless (f curVal) $ waitTill f
+        pulse = do waitTill (== v)                  -- wait until pulse starts
+                   (t, _) <- time $ waitTill (/= v) -- wait till pulse ends, measuring the time
+                   return $ fromIntegral t
 
 -- | Read the value of a pin in analog mode; this is a non-blocking call, immediately
 -- returning the last sampled value. It returns @0@ if the voltage on the pin

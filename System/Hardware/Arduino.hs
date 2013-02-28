@@ -33,14 +33,14 @@ module System.Hardware.Arduino (
   -- *** Writing digital values
   , digitalWrite
   -- *** Reading digital values
-  , digitalRead,  pullUpResistor, waitFor, waitAny, waitAnyHigh, waitAnyLow
+  , digitalRead,  pullUpResistor, waitFor, waitAny, waitAnyHigh, waitAnyLow, pulseIn
   -- ** Analog Communication
   -- *** Setting up sampling interval
   , setAnalogSamplingInterval
   -- *** Reading analog values
   , analogRead
   -- * Misc utilities
-  , delay
+  , delay, time, timeOut
  )
  where
 
