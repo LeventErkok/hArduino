@@ -16,6 +16,7 @@ import Data.Char          (isAlphaNum, isAscii, isSpace, chr)
 import Data.IORef         (newIORef, readIORef, writeIORef)
 import Data.List          (intercalate)
 import Data.Word          (Word8)
+import Data.Time          (getCurrentTime, utctDayTime)
 import Numeric            (showHex, showIntAtBase)
 
 -- | Delay (wait) for the given number of milli-seconds
@@ -29,7 +30,10 @@ mkDebugPrinter True  = do
         cnt <- newIORef (1::Int)
         let f s = do i <- readIORef cnt
                      writeIORef cnt (i+1)
-                     putStrLn $ "[" ++ show i ++ "] hArduino: " ++ s
+                     tick <- utctDayTime `fmap` getCurrentTime
+                     let precision = 1000000 :: Integer
+                         micro = round . (fromIntegral precision *) . toRational $ tick
+                     putStrLn $ "[" ++ show i ++ ":" ++ show (micro :: Integer) ++ "] hArduino: " ++ s
         return f
 
 -- | Show a byte in a visible format.

@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.SamplePrograms.Pulse
+-- Module      :  System.Hardware.Arduino.SamplePrograms.PulseIn
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- the 'pulseIn' function with a time-out.
 -------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.SamplePrograms.Pulse where
+module System.Hardware.Arduino.SamplePrograms.PulseIn where
 
 import Control.Monad       (forever)
 import Control.Monad.Trans (liftIO)
@@ -25,10 +25,10 @@ import System.Hardware.Arduino
 -- digital input 2 and +5V, guarded by a 10K resistor:
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Pulse.png>>
-pulse :: IO ()
-pulse = withArduino False "/dev/cu.usbmodemfd131" $ do
-            setPinMode pb INPUT
-            go
+pulseDemo :: IO ()
+pulseDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
+               setPinMode pb INPUT
+               go
  where pb = digital 2
        go = forever $ do
               liftIO $ putStr "Ready, push-and-hold for less than 5 seconds: "

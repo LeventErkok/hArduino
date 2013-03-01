@@ -12,15 +12,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Firmata where
 
-import Control.Concurrent  (newEmptyMVar, readMVar, threadDelay)
+import Control.Concurrent  (newEmptyMVar, readMVar, withMVar, modifyMVar_, threadDelay)
 import Control.Monad       (when, unless, void)
-import Control.Monad.State (StateT(..))
+import Control.Monad.State (StateT(..), gets)
 import Control.Monad.Trans (liftIO)
-import Data.Bits           ((.&.), shiftR)
+import Data.Bits           ((.&.), shiftR, setBit)
 import Data.Word           (Word8)
+import Data.Time           (getCurrentTime, utctDayTime)
+import System.Timeout      (timeout)
 
-import Data.Time      (getCurrentTime, utctDayTime)
-import System.Timeout (timeout)
+import qualified Data.Map as M
 
 import System.Hardware.Arduino.Data
 import System.Hardware.Arduino.Comm
@@ -87,16 +88,55 @@ digitalWrite p' v = do
      _                      -> do (lsb, msb) <- computePortData p v
                                   send $ DigitalPortWrite (pinPort p) lsb msb
 
--- | Send a pulse-out on a digital-pin for the given number of micro-seconds
-pulseOut :: Pin -> Bool -> Int -> Arduino ()
-pulseOut p' v d
-  | d <= 0 = return ()
-  | True   = do p <- convertToInternalPin p'
-                writeThrough p v
-                liftIO $ threadDelay d
-                writeThrough p (not v)
-  where writeThrough p val = do (lsb, msb) <- computePortData p val
-                                send $ DigitalPortWrite (pinPort p) lsb msb
+-- | Send a pulse-out on a digital-pin.
+--
+-- NB. Keep in mind that the accuracy of this function is inherently limited! In particular, this version
+-- of 'pulseOut' will *not* work for very fine pulse durations, as the delay introduced
+-- in Firmata communication would make the timing unreliable. There are proposals to extend Arduino with
+-- pulseIn/pulseOut commands, which should make such measurements possible in the future.
+pulseOut :: Pin  -- ^ Pin to send the pulse on
+         -> Bool -- ^ Pulse value
+         -> Int  -- ^ Time, in microseconds, to signal beginning of pulse; will send the opposite value for this amount
+         -> Int  -- ^ Pulse duration, measured in microseconds
+         -> Arduino ()
+pulseOut p' pulseValue dBefore dAfter
+  | dBefore < 0 || dAfter < 0
+  = die ("pulseOut: Invalid delay amounts: " ++ show (dBefore, dAfter)) 
+        [ "Pre-delay and pulse-amounts must be non-negative."]
+  | True
+  = do p <- convertToInternalPin p'
+       pd <- getPinData p
+       when (pinMode pd /= OUTPUT) $ die ("Invalid pulseOut call on pin " ++ show p)
+                                         [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                         , "For pulseOut, it must be set to: " ++ show OUTPUT
+                                         , "via a proper call to setPinMode"
+                                         ]
+       let curPort  = pinPort p
+           curIndex = pinPortIndex p
+       bs  <- gets boardState
+       (setMask, resetMask) <- liftIO $ withMVar bs $ \bst -> do
+           let values = [(pinPortIndex sp, pinValue spd) | (sp, spd) <- M.assocs (pinStates bst), curPort == pinPort sp, pinMode pd `elem` [INPUT, OUTPUT]]
+               getVal nv i
+                | i == curIndex                              = nv
+                | Just (Just (Left ov)) <- i `lookup` values = ov
+                | True                                       = False
+               mkMask val = let [b0, b1, b2, b3, b4, b5, b6, b7] = map (getVal val) [0 .. 7]
+                                lsb = foldr (\(i, b) m -> if b then m `setBit` i     else m) 0 (zip [0..] [b0, b1, b2, b3, b4, b5, b6])
+                                msb = foldr (\(i, b) m -> if b then m `setBit` (i-7) else m) 0 (zip [7..] [b7])
+                            in (lsb, msb)
+           return (mkMask pulseValue, mkMask (not pulseValue))
+       let writeThrough (lsb, msb) = send $ DigitalPortWrite curPort lsb msb
+       -- make sure masks are pre computed, and clear the line
+       fst setMask `seq` snd setMask `seq` fst resetMask `seq` snd resetMask `seq` writeThrough resetMask
+       -- Wait before starting the pulse
+       liftIO $ threadDelay dBefore
+       -- Send the pulse
+       writeThrough setMask
+       liftIO $ threadDelay dAfter
+       -- Finish the pulse
+       writeThrough resetMask
+       -- Do a final internal update to reflect the final value of the line
+       liftIO $ modifyMVar_ bs $ \bst -> return bst{pinStates = M.insert p PinData{pinMode = OUTPUT, pinValue = Just (Left (not pulseValue))}(pinStates bst)}
 
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
@@ -196,6 +236,11 @@ waitGeneric ps = do
 --    In this case, the overall return value is @Nothing@.
 --
 -- NB. Both the time-out value and the return value are given in micro-seconds.
+--
+-- NB. Keep in mind that the accuracy of this function is inherently limited! In particular, this version
+-- of 'pulseIn' will *not* work for fine measuraments of distance via sonar based sensors, as the delay introduced
+-- in Firmata communication would make the measurements unreliable. There are proposals to extend Arduino with
+-- pulseIn/pulseOut commands, which should make such measurements possible in the future.
 pulseIn :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
 pulseIn p v mbTo = case mbTo of
                     Nothing -> Just `fmap` pulse
