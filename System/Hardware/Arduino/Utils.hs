@@ -11,11 +11,11 @@
 module System.Hardware.Arduino.Utils where
 
 import Control.Concurrent (threadDelay)
-import Data.Bits          ((.|.), shiftL)
+import Data.Bits          ((.|.), shiftL, (.&.), shiftR)
 import Data.Char          (isAlphaNum, isAscii, isSpace, chr)
 import Data.IORef         (newIORef, readIORef, writeIORef)
 import Data.List          (intercalate)
-import Data.Word          (Word8)
+import Data.Word          (Word8, Word32)
 import Data.Time          (getCurrentTime, utctDayTime)
 import Numeric            (showHex, showIntAtBase)
 
@@ -58,3 +58,11 @@ getString []         = ""
 getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen
 getString (l:h:rest) = c : getString rest
   where c = chr $ fromIntegral $ h `shiftL` 8 .|. l
+
+-- | Convert a word to it's bytes, as would be required by Arduino comms
+word2Bytes :: Word32 -> [Word8]
+word2Bytes i = map fromIntegral [(i `shiftR` 24) .&. 0xFF, (i `shiftR` 16) .&. 0xFF, (i `shiftR`  8) .&. 0xFF, i .&. 0xFF]
+
+-- | Inverse conversion for word2Bytes
+bytes2Words :: (Word8, Word8, Word8, Word8) -> Word32
+bytes2Words (a, b, c, d) = fromIntegral a `shiftL` 24 .|. fromIntegral b `shiftL` 16 .|. fromIntegral c `shiftL` 8 .|. fromIntegral d

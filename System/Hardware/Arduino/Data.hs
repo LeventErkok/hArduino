@@ -17,11 +17,12 @@ module System.Hardware.Arduino.Data where
 
 import Control.Applicative        (Applicative)
 import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, ThreadId)
+import Control.Monad              (when)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
 import Data.Bits                  ((.&.), (.|.), setBit)
 import Data.List                  (intercalate)
 import Data.Maybe                 (fromMaybe, listToMaybe)
-import Data.Word                  (Word8)
+import Data.Word                  (Word8, Word32)
 import System.Hardware.Serialport (SerialPort)
 
 import qualified Data.Map as M
@@ -38,14 +39,14 @@ instance Show Port where
   show p = "Port" ++ show (portNo p)
 
 -- | A pin on the Arduino, as specified by the user via 'pin', 'digital', and 'analog' functions.
-data Pin = DigitalPin Word8
-         | AnalogPin  Word8
-         | MixedPin   Word8
+data Pin = DigitalPin {userPinNo :: Word8}
+         | AnalogPin  {userPinNo :: Word8}
+         | MixedPin   {userPinNo :: Word8}
 
 instance Show Pin where
-  show (MixedPin w)   = "Pin"  ++ show w
   show (DigitalPin w) = "DPin" ++ show w
   show (AnalogPin  w) = "APin" ++ show w
+  show (MixedPin   w) = "Pin"  ++ show w
 
 -- | A pin on the Arduino, as viewed by the library; i.e., real-pin numbers
 data IPin = InternalPin { pinNo :: Word8 }
@@ -102,16 +103,16 @@ data PinMode = INPUT    -- ^ Digital input
              deriving (Eq, Show, Enum)
 
 -- | A request, as sent to Arduino
-data Request = SystemReset                          -- ^ Send system reset
-             | QueryFirmware                        -- ^ Query the Firmata version installed
-             | CapabilityQuery                      -- ^ Query the capabilities of the board
-             | AnalogMappingQuery                   -- ^ Query the mapping of analog pins
-             | SetPinMode         IPin PinMode      -- ^ Set the mode on a pin
-             | DigitalReport      Port Bool         -- ^ Digital report values on port enable/disable
-             | AnalogReport       IPin Bool         -- ^ Analog report values on pin enable/disable
-             | DigitalPortWrite   Port Word8 Word8  -- ^ Set the values on a port digitally
-             | SamplingInterval   Word8 Word8       -- ^ Set the sampling interval
-             | PulseIn            IPin Bool Int     -- ^ Request for a pulse reading on a pin
+data Request = SystemReset                                -- ^ Send system reset
+             | QueryFirmware                              -- ^ Query the Firmata version installed
+             | CapabilityQuery                            -- ^ Query the capabilities of the board
+             | AnalogMappingQuery                         -- ^ Query the mapping of analog pins
+             | SetPinMode         IPin PinMode            -- ^ Set the mode on a pin
+             | DigitalReport      Port Bool               -- ^ Digital report values on port enable/disable
+             | AnalogReport       IPin Bool               -- ^ Analog report values on pin enable/disable
+             | DigitalPortWrite   Port Word8 Word8        -- ^ Set the values on a port digitally
+             | SamplingInterval   Word8 Word8             -- ^ Set the sampling interval
+             | Pulse              IPin Bool Word32 Word32 -- ^ Request for a pulse reading on a pin, value, duration, timeout
              deriving Show
 
 -- | A response, as returned from the Arduino
@@ -120,7 +121,7 @@ data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/
               | AnalogMapping [Word8]                -- ^ Analog pin mappings
               | DigitalMessage Port Word8 Word8      -- ^ Status of a port
               | AnalogMessage  IPin Word8 Word8      -- ^ Status of an analog pin
-              | PulseInResponse                      -- ^ Repsonse to a PulseInCommand
+              | PulseResponse  IPin Word32           -- ^ Repsonse to a PulseInCommand
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
@@ -129,7 +130,7 @@ instance Show Response where
   show (AnalogMapping bs)      = "AnalogMapping: " ++ showByteList bs
   show (DigitalMessage p l h)  = "DigitalMessage " ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
   show (AnalogMessage  p l h)  = "AnalogMessage "  ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
-  show (PulseInResponse)       = "PulseInResponse"
+  show (PulseResponse p v)     = "PulseResponse "  ++ show p ++ " = " ++ show v ++ " (microseconds)"
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " " ++ showByteList bs
 
 -- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
@@ -330,7 +331,7 @@ data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a ch
               | SAMPLING_INTERVAL       -- ^ @0x7A@  sampling interval
               | SYSEX_NON_REALTIME      -- ^ @0x7E@  MIDI Reserved for non-realtime messages
               | SYSEX_REALTIME          -- ^ @0x7F@  MIDI Reserved for realtime messages
-              | PULSE_IN                -- ^ @0x54@  Pulse-In, see: https://github.com/rwldrn/johnny-five/issues/18
+              | PULSE                   -- ^ @0x54@  Pulse, see: https://github.com/rwldrn/johnny-five/issues/18
               deriving Show
 
 -- | Convert a 'SysExCmd' to a byte
@@ -353,7 +354,7 @@ sysExCmdVal REPORT_FIRMWARE         = 0x79
 sysExCmdVal SAMPLING_INTERVAL       = 0x7A
 sysExCmdVal SYSEX_NON_REALTIME      = 0x7E
 sysExCmdVal SYSEX_REALTIME          = 0x7F
-sysExCmdVal PULSE_IN                = 0x54
+sysExCmdVal PULSE                   = 0x54
 
 -- | Convert a byte into a 'SysExCmd'
 getSysExCommand :: Word8 -> Either Word8 SysExCmd
@@ -375,7 +376,7 @@ getSysExCommand 0x79 = Right REPORT_FIRMWARE
 getSysExCommand 0x7A = Right SAMPLING_INTERVAL
 getSysExCommand 0x7E = Right SYSEX_NON_REALTIME
 getSysExCommand 0x7F = Right SYSEX_REALTIME
-getSysExCommand 0x54 = Right PULSE_IN
+getSysExCommand 0x54 = Right PULSE
 getSysExCommand n    = Left n
 
 -- | Keep track of pin-mode changes
@@ -465,13 +466,30 @@ getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode:
 -- simply by their natural numbers, which makes for portable programs
 -- between boards that have different number of digital pins. We adjust
 -- for this shift here.
-convertToInternalPin :: Pin -> Arduino IPin
-convertToInternalPin (MixedPin p)   = return $ InternalPin p
-convertToInternalPin (DigitalPin p) = return $ InternalPin p
-convertToInternalPin (AnalogPin p)
+getInternalPin :: Pin -> Arduino IPin
+getInternalPin (MixedPin p)   = return $ InternalPin p
+getInternalPin (DigitalPin p) = return $ InternalPin p
+getInternalPin (AnalogPin p)
   = do BoardCapabilities caps <- gets capabilities
        case listToMaybe [realPin | (realPin, PinCapabilities{analogPinNumber = Just n}) <- M.toAscList caps, p == n] of
          Nothing -> die ("hArduino: " ++ show p ++ " is not a valid analog-pin on this board.")
                         -- Try to be helpful in case they are trying to use a large value thinking it needs to be offset
                         ["Hint: To refer to analog pin number k, simply use 'pin k', not 'pin (k+noOfDigitalPins)'" | p > 13]
          Just rp -> return rp
+
+-- | Similar to getInternalPin above, except also makes sure the pin is in a required mode.
+convertAndCheckPin :: String -> Pin -> PinMode -> Arduino (IPin, PinData)
+convertAndCheckPin what p' m = do
+   p <- getInternalPin p'
+   pd <- getPinData p
+   let user = userPinNo p'
+       board = pinNo p
+       bInfo
+         | user == board = ""
+         | True          = " (On board " ++ show p ++ ")"
+   when (pinMode pd /= m) $ die ("Invalid " ++ what ++ " call on pin " ++ show p' ++ bInfo)
+                                [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                , "For " ++ what ++ ", it must be set to: " ++ show m
+                                , "via a proper call to setPinMode"
+                                ]
+   return (p, pd)

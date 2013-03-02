@@ -68,7 +68,7 @@ timeOut to (Arduino (StateT f)) = Arduino (StateT (\st -> do
 -- | Set the mode on a particular pin on the board
 setPinMode :: Pin -> PinMode -> Arduino ()
 setPinMode p' m = do
-   p <- convertToInternalPin p'
+   p <- getInternalPin p'
    extras <- registerPinMode p m
    send $ SetPinMode p m
    mapM_ send extras
@@ -76,14 +76,7 @@ setPinMode p' m = do
 -- | Set or clear a digital pin on the board
 digitalWrite :: Pin -> Bool -> Arduino ()
 digitalWrite p' v = do
-   -- first make sure we have this pin set as output
-   p <- convertToInternalPin p'
-   pd <- getPinData p
-   when (pinMode pd /= OUTPUT) $ die ("Invalid digitalWrite call on pin " ++ show p)
-                                       [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                       , "For digitalWrite, it must be set to: " ++ show OUTPUT
-                                       , "via a proper call to setPinMode"
-                                       ]
+   (p, pd) <- convertAndCheckPin "digitalWrite" p' OUTPUT
    case pinValue pd of
      Just (Left b) | b == v -> return () -- no change, nothing to do
      _                      -> do (lsb, msb) <- computePortData p v
@@ -92,14 +85,7 @@ digitalWrite p' v = do
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
 pullUpResistor p' v = do
-   -- first make sure we have this pin set as input
-   p <- convertToInternalPin p'
-   pd <- getPinData p
-   when (pinMode pd /= INPUT) $ die ("Invalid turnOnPullUpResistor call on pin " ++ show p)
-                                      [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                      , "For turnOnPullUpResistor, it must be set to: " ++ show INPUT
-                                      , "via a proper call to setPinMode"
-                                      ]
+   (p, _) <- convertAndCheckPin "pullUpResistor" p' INPUT
    (lsb, msb) <- computePortData p v
    send $ DigitalPortWrite (pinPort p) lsb msb
 
@@ -108,14 +94,7 @@ pullUpResistor p' v = do
 -- in the pin first.
 digitalRead :: Pin -> Arduino Bool
 digitalRead p' = do
-   -- first make sure we have this pin set as input
-   p <- convertToInternalPin p'
-   pd <- getPinData p
-   when (pinMode pd /= INPUT) $ die ("Invalid digitalRead call on pin " ++ show p)
-                                      [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                      , "For digitalWrite, it must be set to: " ++ show INPUT
-                                      , "via a proper call to setPinMode"
-                                      ]
+   (_, pd) <- convertAndCheckPin "digitalRead" p' INPUT
    return $ case pinValue pd of
               Just (Left v) -> v
               _             -> False -- no (correctly-typed) value reported yet, default to False
@@ -170,20 +149,23 @@ waitGeneric ps = do
                     else return $ zip curVals newVals
    wait
 
--- | Measure how long a pin stays the required value, with a potential time-out. The call @pulseIn p v to@
+-- | Send down a pulse, and measure how long the pin reports a corresponding pulse, with a potential time-out. The call @pulse p v duration mbTimeOut@
 -- does the following:
 --
---   * Waits until pin @p@ has value @v@. (If pin already has value @v@ then there's no wait.)
+--   * Set the pin to value @v@ for @duration@ microseconds.
+--
+--   * Waits 2 microseconds
 --
 --   * Waits until pin @p@ has value @not v@.
 --
---   * Returns, in micro-seconds, the duration the pin stayed @v@.
+--   * Returns, in micro-seconds, the duration the pin stayed @v@, counting from the 2 microsecond wait.
 --
 -- Time-out parameter is used as follows:
 --
---    * If @to@ is @Nothing@, then 'pulseIn' will wait until the pin attains the value required and so long as it holds it.
+--    * If @mbTimeOut@ is @Nothing@, then 'pulse' will wait until the pin attains the value required and so long as it holds it.
+--    Note that very-long time-out values are unlikely to be accurate.
 -- 
---    * If @to@ is @Just t@ then, 'pulseIn' will stop if the above procedure does not complete within the given micro-seconds.
+--    * If @mbTimeOut@ is @Just t@ then, 'pulse' will stop if the above procedure does not complete within the given micro-seconds.
 --    In this case, the overall return value is @Nothing@.
 --
 -- NB. Both the time-out value and the return value are given in micro-seconds.
@@ -194,14 +176,25 @@ waitGeneric ps = do
 -- 'pulseIn_hostOnly', which works with the distributed StandardFirmata: It implements a version that is not as
 -- accurate in its timing, but might be sufficient if high precision is not required.
 pulse :: Pin -> Bool -> Int -> Maybe Int -> Arduino (Maybe Int)
-pulse p' v _duration mbTo = do
-        p <- convertToInternalPin p'
-        send $ PulseIn p v (0 `max` (fromMaybe 0 mbTo))
+pulse p' v duration mbTo = do
+        (p, _) <- convertAndCheckPin "pulse" p' INPUT
+        let to = fromMaybe 0 mbTo
+        unless (any (< 0) [duration, to]) $ die ("Invalid duration/time-out values for pulse on pin " ++ show p)
+                                                [ "Values should be between 0 and 4294967295"
+                                                , "Received: " ++ show (duration, to)
+                                                ]
+        send $ Pulse p v (fromIntegral duration) (fromIntegral to)
         r <- recv
         case r of
-          PulseInResponse -> return $ Just 0
-          _               -> die "pulseIn: Got unexpected response for pulseIn call: " [show r]
-
+          PulseResponse pOut d | p == pOut -> case d of
+                                                0 -> return  Nothing
+                                                i -> -- should we worry about overflow here?
+                                                     -- Not really. This will overflow if the pulse was longer
+                                                     -- than (maxBound :: Int) microseconds. This amount
+                                                     -- is about 25 days for 32-bit machines and 292 million
+                                                     -- years for 64-bit machines. I think I'll take my chances.
+                                                     return (Just (fromIntegral i))
+          _                                -> die ("pulseIn: Got unexpected response for Pulse call on pin: " ++ show p') [show r]
 
 -- | A /hostOnly/ version of pulse-out on a digital-pin. Use this function only for cases where the
 -- precision required only matters for the host, not for the board. That is, due to the inherent
@@ -218,13 +211,7 @@ pulseOut_hostTiming p' pulseValue dBefore dAfter
   = die ("pulseOut: Invalid delay amounts: " ++ show (dBefore, dAfter)) 
         [ "Pre-delay and pulse-amounts must be non-negative."]
   | True
-  = do p <- convertToInternalPin p'
-       pd <- getPinData p
-       when (pinMode pd /= OUTPUT) $ die ("Invalid pulseOut call on pin " ++ show p)
-                                         [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                         , "For pulseOut, it must be set to: " ++ show OUTPUT
-                                         , "via a proper call to setPinMode"
-                                         ]
+  = do (p, pd) <- convertAndCheckPin "pulseOut_hostTiming" p' OUTPUT
        let curPort  = pinPort p
            curIndex = pinPortIndex p
        bs  <- gets boardState
@@ -275,17 +262,10 @@ pulseIn_hostTiming p v mbTo = case mbTo of
 -- sampling frequency.)
 analogRead :: Pin -> Arduino Int
 analogRead p' = do
-   -- first make sure we have this pin set as analog
-   p <- convertToInternalPin p'
-   pd <- getPinData p
-   when (pinMode pd /= ANALOG) $ die ("Invalid analogRead call on pin " ++ show p' ++ "(On board: " ++ show p ++ ")")
-                                     [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                     , "For analogRead, it must be set to: " ++ show ANALOG
-                                     , "via a proper call to setPinMode"
-                                     ]
+   (_, pd) <- convertAndCheckPin "analogRead" p' ANALOG
    return $ case pinValue pd of
               Just (Right v) -> v
-              _              -> 0 -- no (correctly-typed) value reported yet, default to False
+              _              -> 0 -- no (correctly-typed) value reported yet, default to 0
 
 -- | Set the analog sampling interval, in milliseconds. Arduino uses a default of 19ms to sample analog and I2C
 -- signals, which is fine for many applications, but can be modified if needed. The argument

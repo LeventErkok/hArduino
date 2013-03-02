@@ -42,7 +42,7 @@ package (DigitalReport p b)      = nonSysEx (REPORT_DIGITAL_PORT p) [if b then 1
 package (SetPinMode p m)         = nonSysEx SET_PIN_MODE            [fromIntegral (pinNo p), fromIntegral (fromEnum m)]
 package (DigitalPortWrite p l m) = nonSysEx (DIGITAL_MESSAGE p)     [l, m]
 package (SamplingInterval l m)   = sysEx    SAMPLING_INTERVAL       [l, m]
-package (PulseIn p b to)         = sysEx    PULSE_IN                [fromIntegral (pinNo p), if b then 1 else 0, fromIntegral to]
+package (Pulse p b dur to)       = sysEx    PULSE                   ([fromIntegral (pinNo p), if b then 1 else 0] ++ word2Bytes dur ++ word2Bytes to)
 
 -- | Unpackage a SysEx response
 unpackageSysEx :: [Word8] -> Response
@@ -53,6 +53,7 @@ unpackageSysEx (cmdWord:args)
       (REPORT_FIRMWARE, majV : minV : rest) -> Firmware majV minV (getString rest)
       (CAPABILITY_RESPONSE, bs)             -> Capabilities (getCapabilities bs)
       (ANALOG_MAPPING_RESPONSE, bs)         -> AnalogMapping bs
+      (PULSE, [p, a, b, c, d])              -> PulseResponse (InternalPin p) (bytes2Words (a, b, c, d))
       _                                     -> Unimplemented (Just (show cmd)) args
   | True
   = Unimplemented Nothing (cmdWord : args)
