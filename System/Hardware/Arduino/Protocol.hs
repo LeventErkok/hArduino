@@ -42,6 +42,7 @@ package (DigitalReport p b)      = nonSysEx (REPORT_DIGITAL_PORT p) [if b then 1
 package (SetPinMode p m)         = nonSysEx SET_PIN_MODE            [fromIntegral (pinNo p), fromIntegral (fromEnum m)]
 package (DigitalPortWrite p l m) = nonSysEx (DIGITAL_MESSAGE p)     [l, m]
 package (SamplingInterval l m)   = sysEx    SAMPLING_INTERVAL       [l, m]
+package (PulseIn p b to)         = sysEx    PULSE_IN                [fromIntegral (pinNo p), if b then 1 else 0, fromIntegral to]
 
 -- | Unpackage a SysEx response
 unpackageSysEx :: [Word8] -> Response

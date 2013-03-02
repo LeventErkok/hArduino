@@ -111,6 +111,7 @@ data Request = SystemReset                          -- ^ Send system reset
              | AnalogReport       IPin Bool         -- ^ Analog report values on pin enable/disable
              | DigitalPortWrite   Port Word8 Word8  -- ^ Set the values on a port digitally
              | SamplingInterval   Word8 Word8       -- ^ Set the sampling interval
+             | PulseIn            IPin Bool Int     -- ^ Request for a pulse reading on a pin
              deriving Show
 
 -- | A response, as returned from the Arduino
@@ -119,6 +120,7 @@ data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/
               | AnalogMapping [Word8]                -- ^ Analog pin mappings
               | DigitalMessage Port Word8 Word8      -- ^ Status of a port
               | AnalogMessage  IPin Word8 Word8      -- ^ Status of an analog pin
+              | PulseInResponse                      -- ^ Repsonse to a PulseInCommand
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
 instance Show Response where
@@ -127,6 +129,7 @@ instance Show Response where
   show (AnalogMapping bs)      = "AnalogMapping: " ++ showByteList bs
   show (DigitalMessage p l h)  = "DigitalMessage " ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
   show (AnalogMessage  p l h)  = "AnalogMessage "  ++ show p ++ " = " ++ showByte l ++ " " ++ showByte h
+  show (PulseInResponse)       = "PulseInResponse"
   show (Unimplemented mbc bs)  = "Unimplemeneted " ++ fromMaybe "" mbc ++ " " ++ showByteList bs
 
 -- | Resolution, as referred to in http://firmata.org/wiki/Protocol#Capability_Query
@@ -327,6 +330,7 @@ data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a ch
               | SAMPLING_INTERVAL       -- ^ @0x7A@  sampling interval
               | SYSEX_NON_REALTIME      -- ^ @0x7E@  MIDI Reserved for non-realtime messages
               | SYSEX_REALTIME          -- ^ @0x7F@  MIDI Reserved for realtime messages
+              | PULSE_IN                -- ^ @0x54@  Pulse-In, see: https://github.com/rwldrn/johnny-five/issues/18
               deriving Show
 
 -- | Convert a 'SysExCmd' to a byte
@@ -349,6 +353,7 @@ sysExCmdVal REPORT_FIRMWARE         = 0x79
 sysExCmdVal SAMPLING_INTERVAL       = 0x7A
 sysExCmdVal SYSEX_NON_REALTIME      = 0x7E
 sysExCmdVal SYSEX_REALTIME          = 0x7F
+sysExCmdVal PULSE_IN                = 0x54
 
 -- | Convert a byte into a 'SysExCmd'
 getSysExCommand :: Word8 -> Either Word8 SysExCmd
@@ -370,6 +375,7 @@ getSysExCommand 0x79 = Right REPORT_FIRMWARE
 getSysExCommand 0x7A = Right SAMPLING_INTERVAL
 getSysExCommand 0x7E = Right SYSEX_NON_REALTIME
 getSysExCommand 0x7F = Right SYSEX_REALTIME
+getSysExCommand 0x54 = Right PULSE_IN
 getSysExCommand n    = Left n
 
 -- | Keep track of pin-mode changes

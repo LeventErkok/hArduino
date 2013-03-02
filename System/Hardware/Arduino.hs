@@ -35,7 +35,7 @@ module System.Hardware.Arduino (
   -- *** Reading digital values
   , digitalRead,  pullUpResistor, waitFor, waitAny, waitAnyHigh, waitAnyLow
   -- *** Receiving and sending pulses
-  , pulseIn, pulseOut
+  , pulseIn, pulseIn_hostOnly, pulseOut
   -- ** Analog Communication
   -- *** Setting up sampling interval
   , setAnalogSamplingInterval

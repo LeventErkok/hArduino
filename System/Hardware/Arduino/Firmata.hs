@@ -17,9 +17,10 @@ import Control.Monad       (when, unless, void)
 import Control.Monad.State (StateT(..), gets)
 import Control.Monad.Trans (liftIO)
 import Data.Bits           ((.&.), shiftR, setBit)
-import Data.Word           (Word8)
+import Data.Maybe          (fromMaybe)
 import Data.Time           (getCurrentTime, utctDayTime)
 import System.Timeout      (timeout)
+import Data.Word           (Word8)
 
 import qualified Data.Map as M
 
@@ -237,12 +238,29 @@ waitGeneric ps = do
 --
 -- NB. Both the time-out value and the return value are given in micro-seconds.
 --
+-- NB. As of March 2 2013; StandardFirmata that's distributed with the Arduino-App does /not/ support the Pulse-In command.
+-- However, there is a patch to add this command; see: <http://github.com/rwldrn/johnny-five/issues/18> for details.
+-- If you want to use hArduino's 'pulseIn' command, then you /have/ to install the above patch. Also see the function
+-- 'pulseIn_hostOnly', which works with the distributed StandardFirmata: It implements a version that is not as
+-- accurate in its timing, but might be sufficient if high precision is not required.
+pulseIn :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
+pulseIn p' v mvTo = do
+        p <- convertToInternalPin p'
+        send $ PulseIn p v (0 `max` (fromMaybe 0 mvTo))
+        r <- recv
+        case r of
+          PulseInResponse -> return $ Just 0
+          _               -> die "pulseIn: Got unexpected response for pulseIn call: " [show r]
+
+-- | A /hostOnly/ version of 'pulseIn'. Use this function only if you cannot get the patched Firmata release, or if the
+-- timing of the pulse is not required to be too precise. See the comments in 'pulseIn' for details.
+--
 -- NB. Keep in mind that the accuracy of this function is inherently limited! In particular, this version
 -- of 'pulseIn' will *not* work for fine measuraments of distance via sonar based sensors, as the delay introduced
--- in Firmata communication would make the measurements unreliable. There are proposals to extend Arduino with
--- pulseIn/pulseOut commands, which should make such measurements possible in the future.
-pulseIn :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
-pulseIn p v mbTo = case mbTo of
+-- in Firmata communication would make the measurements unreliable. For those applications, use the 'pulseIn' command,
+-- with the appropriate release of Firmata.
+pulseIn_hostOnly :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
+pulseIn_hostOnly p v mbTo = case mbTo of
                     Nothing -> Just `fmap` pulse
                     Just to -> timeOut to pulse
   where waitTill f = do curVal <- digitalRead p
@@ -250,6 +268,7 @@ pulseIn p v mbTo = case mbTo of
         pulse = do waitTill (== v)                  -- wait until pulse starts
                    (t, _) <- time $ waitTill (/= v) -- wait till pulse ends, measuring the time
                    return $ fromIntegral t
+{-# ANN pulseIn_hostOnly "HLint: ignore Use camelCase" #-}
 
 -- | Read the value of a pin in analog mode; this is a non-blocking call, immediately
 -- returning the last sampled value. It returns @0@ if the voltage on the pin

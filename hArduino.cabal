@@ -40,6 +40,7 @@ Library
                   , System.Hardware.Arduino.SamplePrograms.Blink
                   , System.Hardware.Arduino.SamplePrograms.Button
                   , System.Hardware.Arduino.SamplePrograms.Counter
+                  , System.Hardware.Arduino.SamplePrograms.Distance
                   , System.Hardware.Arduino.SamplePrograms.LCD
                   , System.Hardware.Arduino.SamplePrograms.PulseIn
                   , System.Hardware.Arduino.SamplePrograms.PulseOut
