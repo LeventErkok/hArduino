@@ -323,6 +323,7 @@ data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a ch
               | EXTENDED_ANALOG         -- ^ @0x6F@  analog write (PWM, Servo, etc) to any pin
               | SERVO_CONFIG            -- ^ @0x70@  set max angle, minPulse, maxPulse, freq
               | STRING_DATA             -- ^ @0x71@  a string message with 14-bits per char
+              | PULSE                   -- ^ @0x74@  Pulse, see: https://github.com/rwldrn/johnny-five/issues/18
               | SHIFT_DATA              -- ^ @0x75@  shiftOut config/data message (34 bits)
               | I2C_REQUEST             -- ^ @0x76@  I2C request messages from a host to an I/O board
               | I2C_REPLY               -- ^ @0x77@  I2C reply messages from an I/O board to a host
@@ -331,7 +332,6 @@ data SysExCmd = RESERVED_COMMAND        -- ^ @0x00@  2nd SysEx data byte is a ch
               | SAMPLING_INTERVAL       -- ^ @0x7A@  sampling interval
               | SYSEX_NON_REALTIME      -- ^ @0x7E@  MIDI Reserved for non-realtime messages
               | SYSEX_REALTIME          -- ^ @0x7F@  MIDI Reserved for realtime messages
-              | PULSE                   -- ^ @0x54@  Pulse, see: https://github.com/rwldrn/johnny-five/issues/18
               deriving Show
 
 -- | Convert a 'SysExCmd' to a byte
@@ -346,6 +346,7 @@ sysExCmdVal PIN_STATE_RESPONSE      = 0x6E
 sysExCmdVal EXTENDED_ANALOG         = 0x6F
 sysExCmdVal SERVO_CONFIG            = 0x70
 sysExCmdVal STRING_DATA             = 0x71
+sysExCmdVal PULSE                   = 0x74
 sysExCmdVal SHIFT_DATA              = 0x75
 sysExCmdVal I2C_REQUEST             = 0x76
 sysExCmdVal I2C_REPLY               = 0x77
@@ -354,7 +355,6 @@ sysExCmdVal REPORT_FIRMWARE         = 0x79
 sysExCmdVal SAMPLING_INTERVAL       = 0x7A
 sysExCmdVal SYSEX_NON_REALTIME      = 0x7E
 sysExCmdVal SYSEX_REALTIME          = 0x7F
-sysExCmdVal PULSE                   = 0x54
 
 -- | Convert a byte into a 'SysExCmd'
 getSysExCommand :: Word8 -> Either Word8 SysExCmd
@@ -376,7 +376,7 @@ getSysExCommand 0x79 = Right REPORT_FIRMWARE
 getSysExCommand 0x7A = Right SAMPLING_INTERVAL
 getSysExCommand 0x7E = Right SYSEX_NON_REALTIME
 getSysExCommand 0x7F = Right SYSEX_REALTIME
-getSysExCommand 0x54 = Right PULSE
+getSysExCommand 0x74 = Right PULSE
 getSysExCommand n    = Left n
 
 -- | Keep track of pin-mode changes
