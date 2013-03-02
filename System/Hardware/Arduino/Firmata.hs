@@ -179,10 +179,10 @@ pulse :: Pin -> Bool -> Int -> Maybe Int -> Arduino (Maybe Int)
 pulse p' v duration mbTo = do
         (p, _) <- convertAndCheckPin "pulse" p' INPUT
         let to = fromMaybe 0 mbTo
-        unless (any (< 0) [duration, to]) $ die ("Invalid duration/time-out values for pulse on pin " ++ show p)
-                                                [ "Values should be between 0 and 4294967295"
-                                                , "Received: " ++ show (duration, to)
-                                                ]
+        when (any (< 0) [duration, to]) $ die ("Invalid duration/time-out values for pulse on pin " ++ show p)
+                                              [ "Values should be between 0 and 4294967295"
+                                              , "Received: " ++ show (duration, to)
+                                              ]
         send $ Pulse p v (fromIntegral duration) (fromIntegral to)
         r <- recv
         case r of
