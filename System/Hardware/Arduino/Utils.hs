@@ -54,14 +54,23 @@ showBin n = showIntAtBase 2 (head . show) n ""
 
 -- | Turn a lo/hi encoded Arduino string constant into a Haskell string
 getString :: [Word8] -> String
-getString = map (chr . fromIntegral) . getArduinoBytes
+getString = map (chr . fromIntegral) . fromArduinoBytes
 
--- | Turn a lo/hi encoded Arduino sequence into a bunch of words
-getArduinoBytes :: [Word8] -> [Word8]
-getArduinoBytes []         = []
-getArduinoBytes [x]        = [x]  -- shouldn't really happen
-getArduinoBytes (l:h:rest) = c : getArduinoBytes rest
-  where c = h `shiftL` 8 .|. l
+-- | Turn a lo/hi encoded Arduino sequence into a bunch of words, again weird
+-- encoding.
+fromArduinoBytes :: [Word8] -> [Word8]
+fromArduinoBytes []         = []
+fromArduinoBytes [x]        = [x]  -- shouldn't really happen
+fromArduinoBytes (l:h:rest) = c : fromArduinoBytes rest
+  where c = h `shiftL` 7 .|. l -- first seven bit comes from l; then extra stuff is in h
+
+-- | Turn a normal byte into a lo/hi Arduino byte. If you think this encoding
+-- is just plain weird, you're not alone. (I suspect it has something to do
+-- with error-correcting low-level serial communication of the past.)
+toArduinoBytes :: Word8 -> [Word8]
+toArduinoBytes w = [lo, hi]
+  where lo =  w             .&. 0x7F   -- first seven bits
+        hi = (w `shiftR` 7) .&. 0x7F   -- one extra high-bit
 
 -- | Convert a word to it's bytes, as would be required by Arduino comms
 word2Bytes :: Word32 -> [Word8]

@@ -178,22 +178,19 @@ waitGeneric ps = do
 pulse :: Pin -> Bool -> Int -> Maybe Int -> Arduino (Maybe Int)
 pulse p' v duration mbTo = do
         (p, _) <- convertAndCheckPin "pulse" p' INPUT
-        let to = fromMaybe 0 mbTo
-        when (any (< 0) [duration, to]) $ die ("Invalid duration/time-out values for pulse on pin " ++ show p)
-                                              [ "Values should be between 0 and 4294967295"
-                                              , "Received: " ++ show (duration, to)
-                                              ]
+        let to = fromMaybe maxAllowed mbTo
+            maxAllowed = 2147483647  -- works out to about 36 minutes; which is way beyond the accuracy provided by Arduino
+            bad x = x < 0 || x > maxAllowed
+        when (any bad [duration, to]) $ die ("Invalid duration/time-out values for pulse on pin " ++ show p)
+                                            [ "Values should be between 0 and " ++ show maxAllowed
+                                            , "Received: " ++ show (duration, to)
+                                            ]
         send $ Pulse p v (fromIntegral duration) (fromIntegral to)
         r <- recv
         case r of
           PulseResponse pOut d | p == pOut -> case d of
                                                 0 -> return  Nothing
-                                                i -> -- should we worry about overflow here?
-                                                     -- Not really. This will overflow if the pulse was longer
-                                                     -- than (maxBound :: Int) microseconds. This amount
-                                                     -- is about 25 days for 32-bit machines and 292 million
-                                                     -- years for 64-bit machines. I think I'll take my chances.
-                                                     return (Just (fromIntegral i))
+                                                i -> return (Just (fromIntegral i))
           _                                -> die ("pulseIn: Got unexpected response for Pulse call on pin: " ++ show p') [show r]
 
 -- | A /hostOnly/ version of pulse-out on a digital-pin. Use this function only for cases where the
