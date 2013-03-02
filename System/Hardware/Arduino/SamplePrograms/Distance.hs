@@ -41,15 +41,17 @@ microSecondsToCentimeters d = 1.7e-2 * fromIntegral d
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Distance.png>>
 distance :: IO ()
-distance = withArduino True "/dev/cu.usbmodemfd131" $ do
+distance = withArduino False "/dev/cu.usbmodemfd131" $ do
              setPinMode sensor INPUT
              setPinMode led    OUTPUT
              update
  where sensor = digital 2
        led    = digital 13
-       measure = do Just d <- pulse sensor True 10 Nothing
-                    let c = microSecondsToCentimeters d
-                    liftIO $ putStrLn $ "Distance: " ++ showGFloat (Just 2) c " centimeters."
-                    digitalWrite led (c < 2)
+       measure = do mbd <- pulse sensor True 10 Nothing
+                    case mbd of
+                      Nothing -> liftIO $ putStrLn "Distance: No measurement received."
+                      Just d  -> do let c = microSecondsToCentimeters d
+                                    liftIO $ putStrLn $ "Distance: " ++ showGFloat (Just 2) c " centimeters."
+                                    digitalWrite led (c < 2)
        update = forever $ do measure
                              delay 1000

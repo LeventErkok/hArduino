@@ -54,10 +54,14 @@ showBin n = showIntAtBase 2 (head . show) n ""
 
 -- | Turn a lo/hi encoded Arduino string constant into a Haskell string
 getString :: [Word8] -> String
-getString []         = ""
-getString [a]        = [chr (fromIntegral a)]  -- shouldn't happen
-getString (l:h:rest) = c : getString rest
-  where c = chr $ fromIntegral $ h `shiftL` 8 .|. l
+getString = map (chr . fromIntegral) . getArduinoBytes
+
+-- | Turn a lo/hi encoded Arduino sequence into a bunch of words
+getArduinoBytes :: [Word8] -> [Word8]
+getArduinoBytes []         = []
+getArduinoBytes [x]        = [x]  -- shouldn't really happen
+getArduinoBytes (l:h:rest) = c : getArduinoBytes rest
+  where c = h `shiftL` 8 .|. l
 
 -- | Convert a word to it's bytes, as would be required by Arduino comms
 word2Bytes :: Word32 -> [Word8]

@@ -53,7 +53,7 @@ unpackageSysEx (cmdWord:args)
       (REPORT_FIRMWARE, majV : minV : rest) -> Firmware majV minV (getString rest)
       (CAPABILITY_RESPONSE, bs)             -> Capabilities (getCapabilities bs)
       (ANALOG_MAPPING_RESPONSE, bs)         -> AnalogMapping bs
-      (PULSE, [p, a, b, c, d])              -> PulseResponse (InternalPin p) (bytes2Words (a, b, c, d))
+      (PULSE, xs) | length xs == 10         -> let [p, a, b, c, d] = getArduinoBytes xs in PulseResponse (InternalPin p) (bytes2Words (a, b, c, d))
       _                                     -> Unimplemented (Just (show cmd)) args
   | True
   = Unimplemented Nothing (cmdWord : args)
