@@ -13,8 +13,8 @@
 -- command; see: <http://github.com/rwldrn/johnny-five/issues/18> for details on how to install it. You /should/
 -- have this patched version of Firmata running on your board for this sketch to function properly.
 --
--- Keep in mind that, measurements on a platform like Arduino is always subject to various
--- errors; so relying on this program for precise distance measurements would be an error.
+-- Accuracy: Keep in mind that measurements on a platform like Arduino is always subject to
+-- various errors. Relying on this program for precise distance measurements would be a mistake.
 -- The results here should be accurate to within about half-a-centimeter, provided you stay
 -- within the range of HC-SR04, which is between 2 to 400 cm. For anything more precise than
 -- this, you'll need to use a much more sensitive sensor.

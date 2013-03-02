@@ -6,16 +6,22 @@
 ### Version 0.4, Not yet released
  
  * New functions:
-     * pulseIn: Measure the length of a pulse, with timeout.
-         * NB. This function is inherently inaccurate. See code for comments.
-     * pulseOut: Send a digital pulse out
-         * NB. This function is inherently inaccurate. See code for comments.
+     * pulseIn_hostTiming/pulseOut_hostTiming: Send and receive pulses.
+         * NB. These functions are inherently inaccurate, as they do
+	   the measurements on the host. See code for comments.
+     * pulse: Send and receive a digital pulse on a pin.
+         * This function is more accurate than the pair above, as
+	   it uses a custom Firmata command to measure the pulse.
+	   However, you need a custom Firmata version to use this
+	   function, as the standard version that ships with Arduino
+	   as of March 2013 does not support this functionality yet.
      * time: Measure the time taken by an Arduino action
      * timeOut: Run an action only for the given-time-out
 
  * Examples
     * PulseIn: Demonstrates the use of reading pulses
     * PulseOut: Demonstrates the use of sending pulses
+    * Distance: Measure the distance using an HC-SC04 sensor
 
  * Other:
     * Bugfix: Remove spurious extra call to user program
