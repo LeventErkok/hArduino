@@ -89,56 +89,6 @@ digitalWrite p' v = do
      _                      -> do (lsb, msb) <- computePortData p v
                                   send $ DigitalPortWrite (pinPort p) lsb msb
 
--- | Send a pulse-out on a digital-pin.
---
--- NB. Keep in mind that the accuracy of this function is inherently limited! In particular, this version
--- of 'pulseOut' will *not* work for very fine pulse durations, as the delay introduced
--- in Firmata communication would make the timing unreliable. There are proposals to extend Arduino with
--- pulseIn/pulseOut commands, which should make such measurements possible in the future.
-pulseOut :: Pin  -- ^ Pin to send the pulse on
-         -> Bool -- ^ Pulse value
-         -> Int  -- ^ Time, in microseconds, to signal beginning of pulse; will send the opposite value for this amount
-         -> Int  -- ^ Pulse duration, measured in microseconds
-         -> Arduino ()
-pulseOut p' pulseValue dBefore dAfter
-  | dBefore < 0 || dAfter < 0
-  = die ("pulseOut: Invalid delay amounts: " ++ show (dBefore, dAfter)) 
-        [ "Pre-delay and pulse-amounts must be non-negative."]
-  | True
-  = do p <- convertToInternalPin p'
-       pd <- getPinData p
-       when (pinMode pd /= OUTPUT) $ die ("Invalid pulseOut call on pin " ++ show p)
-                                         [ "The current mode for this pin is: " ++ show (pinMode pd)
-                                         , "For pulseOut, it must be set to: " ++ show OUTPUT
-                                         , "via a proper call to setPinMode"
-                                         ]
-       let curPort  = pinPort p
-           curIndex = pinPortIndex p
-       bs  <- gets boardState
-       (setMask, resetMask) <- liftIO $ withMVar bs $ \bst -> do
-           let values = [(pinPortIndex sp, pinValue spd) | (sp, spd) <- M.assocs (pinStates bst), curPort == pinPort sp, pinMode pd `elem` [INPUT, OUTPUT]]
-               getVal nv i
-                | i == curIndex                              = nv
-                | Just (Just (Left ov)) <- i `lookup` values = ov
-                | True                                       = False
-               mkMask val = let [b0, b1, b2, b3, b4, b5, b6, b7] = map (getVal val) [0 .. 7]
-                                lsb = foldr (\(i, b) m -> if b then m `setBit` i     else m) 0 (zip [0..] [b0, b1, b2, b3, b4, b5, b6])
-                                msb = foldr (\(i, b) m -> if b then m `setBit` (i-7) else m) 0 (zip [7..] [b7])
-                            in (lsb, msb)
-           return (mkMask pulseValue, mkMask (not pulseValue))
-       let writeThrough (lsb, msb) = send $ DigitalPortWrite curPort lsb msb
-       -- make sure masks are pre computed, and clear the line
-       fst setMask `seq` snd setMask `seq` fst resetMask `seq` snd resetMask `seq` writeThrough resetMask
-       -- Wait before starting the pulse
-       liftIO $ threadDelay dBefore
-       -- Send the pulse
-       writeThrough setMask
-       liftIO $ threadDelay dAfter
-       -- Finish the pulse
-       writeThrough resetMask
-       -- Do a final internal update to reflect the final value of the line
-       liftIO $ modifyMVar_ bs $ \bst -> return bst{pinStates = M.insert p PinData{pinMode = OUTPUT, pinValue = Just (Left (not pulseValue))}(pinStates bst)}
-
 -- | Turn on/off internal pull-up resistor on an input pin
 pullUpResistor :: Pin -> Bool -> Arduino ()
 pullUpResistor p' v = do
@@ -243,32 +193,81 @@ waitGeneric ps = do
 -- If you want to use hArduino's 'pulseIn' command, then you /have/ to install the above patch. Also see the function
 -- 'pulseIn_hostOnly', which works with the distributed StandardFirmata: It implements a version that is not as
 -- accurate in its timing, but might be sufficient if high precision is not required.
-pulseIn :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
-pulseIn p' v mvTo = do
+pulse :: Pin -> Bool -> Int -> Maybe Int -> Arduino (Maybe Int)
+pulse p' v _duration mbTo = do
         p <- convertToInternalPin p'
-        send $ PulseIn p v (0 `max` (fromMaybe 0 mvTo))
+        send $ PulseIn p v (0 `max` (fromMaybe 0 mbTo))
         r <- recv
         case r of
           PulseInResponse -> return $ Just 0
           _               -> die "pulseIn: Got unexpected response for pulseIn call: " [show r]
 
--- | A /hostOnly/ version of 'pulseIn'. Use this function only if you cannot get the patched Firmata release, or if the
--- timing of the pulse is not required to be too precise. See the comments in 'pulseIn' for details.
---
--- NB. Keep in mind that the accuracy of this function is inherently limited! In particular, this version
--- of 'pulseIn' will *not* work for fine measuraments of distance via sonar based sensors, as the delay introduced
--- in Firmata communication would make the measurements unreliable. For those applications, use the 'pulseIn' command,
--- with the appropriate release of Firmata.
-pulseIn_hostOnly :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
-pulseIn_hostOnly p v mbTo = case mbTo of
-                    Nothing -> Just `fmap` pulse
-                    Just to -> timeOut to pulse
+
+-- | A /hostOnly/ version of pulse-out on a digital-pin. Use this function only for cases where the
+-- precision required only matters for the host, not for the board. That is, due to the inherent
+-- delays involved in Firmata communication, the timing will /not/ be accurate, and should not
+-- be expected to work uniformly over different boards. Similar comments apply for 'pulseIn_hostTiming'
+-- as well. See the function 'pulse' for a more accurate version.
+pulseOut_hostTiming :: Pin  -- ^ Pin to send the pulse on
+                  -> Bool -- ^ Pulse value
+                  -> Int  -- ^ Time, in microseconds, to signal beginning of pulse; will send the opposite value for this amount
+                  -> Int  -- ^ Pulse duration, measured in microseconds
+                  -> Arduino ()
+pulseOut_hostTiming p' pulseValue dBefore dAfter
+  | dBefore < 0 || dAfter < 0
+  = die ("pulseOut: Invalid delay amounts: " ++ show (dBefore, dAfter)) 
+        [ "Pre-delay and pulse-amounts must be non-negative."]
+  | True
+  = do p <- convertToInternalPin p'
+       pd <- getPinData p
+       when (pinMode pd /= OUTPUT) $ die ("Invalid pulseOut call on pin " ++ show p)
+                                         [ "The current mode for this pin is: " ++ show (pinMode pd)
+                                         , "For pulseOut, it must be set to: " ++ show OUTPUT
+                                         , "via a proper call to setPinMode"
+                                         ]
+       let curPort  = pinPort p
+           curIndex = pinPortIndex p
+       bs  <- gets boardState
+       (setMask, resetMask) <- liftIO $ withMVar bs $ \bst -> do
+           let values = [(pinPortIndex sp, pinValue spd) | (sp, spd) <- M.assocs (pinStates bst), curPort == pinPort sp, pinMode pd `elem` [INPUT, OUTPUT]]
+               getVal nv i
+                | i == curIndex                              = nv
+                | Just (Just (Left ov)) <- i `lookup` values = ov
+                | True                                       = False
+               mkMask val = let [b0, b1, b2, b3, b4, b5, b6, b7] = map (getVal val) [0 .. 7]
+                                lsb = foldr (\(i, b) m -> if b then m `setBit` i     else m) 0 (zip [0..] [b0, b1, b2, b3, b4, b5, b6])
+                                msb = foldr (\(i, b) m -> if b then m `setBit` (i-7) else m) 0 (zip [7..] [b7])
+                            in (lsb, msb)
+           return (mkMask pulseValue, mkMask (not pulseValue))
+       let writeThrough (lsb, msb) = send $ DigitalPortWrite curPort lsb msb
+       -- make sure masks are pre computed, and clear the line
+       fst setMask `seq` snd setMask `seq` fst resetMask `seq` snd resetMask `seq` writeThrough resetMask
+       -- Wait before starting the pulse
+       liftIO $ threadDelay dBefore
+       -- Send the pulse
+       writeThrough setMask
+       liftIO $ threadDelay dAfter
+       -- Finish the pulse
+       writeThrough resetMask
+       -- Do a final internal update to reflect the final value of the line
+       liftIO $ modifyMVar_ bs $ \bst -> return bst{pinStates = M.insert p PinData{pinMode = OUTPUT, pinValue = Just (Left (not pulseValue))}(pinStates bst)}
+{-# ANN pulseOut_hostTiming "HLint: ignore Use camelCase" #-}
+
+-- | A /hostOnly/ version of pulse-in on a digital-pin. Use this function only for cases where the
+-- precision required only matters for the host, not for the board. That is, due to the inherent
+-- delays involved in Firmata communication, the timing will /not/ be accurate, and should not
+-- be expected to work uniformly over different boards. Similar comments apply for 'pulseOut_hostTiming'
+-- as well. See the function 'pulse' for a more accurate version.
+pulseIn_hostTiming :: Pin -> Bool -> Maybe Int -> Arduino (Maybe Int)
+pulseIn_hostTiming p v mbTo = case mbTo of
+                    Nothing -> Just `fmap` measure
+                    Just to -> timeOut to measure
   where waitTill f = do curVal <- digitalRead p
                         unless (f curVal) $ waitTill f
-        pulse = do waitTill (== v)                  -- wait until pulse starts
-                   (t, _) <- time $ waitTill (/= v) -- wait till pulse ends, measuring the time
-                   return $ fromIntegral t
-{-# ANN pulseIn_hostOnly "HLint: ignore Use camelCase" #-}
+        measure = do waitTill (== v)                  -- wait until pulse starts
+                     (t, _) <- time $ waitTill (/= v) -- wait till pulse ends, measuring the time
+                     return $ fromIntegral t
+{-# ANN pulseIn_hostTiming "HLint: ignore Use camelCase" #-}
 
 -- | Read the value of a pin in analog mode; this is a non-blocking call, immediately
 -- returning the last sampled value. It returns @0@ if the voltage on the pin

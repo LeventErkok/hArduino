@@ -35,21 +35,19 @@ microSecondsToCentimeters d = 1.7e-2 * fromIntegral d
 -- | Measure and display the distance continuously, as reported by an HC-SR04 sensor.
 --
 -- Wiring: Simply connect VCC and GND of HC-SR04 to Arduino as usual. The @Trig@ line on the sensor is connected
--- to Arduino pin 2. The @Echo@ line is connected to Arduino pin 3. We also have a led on pin 13 that we will light-up
+-- to Arduino pin 2. The @Echo@ line is connected on the board to the @Trig@ line, i.e., they both connect to the
+-- same pin on the Arduino. We also have a led on pin 13 that we will light-up
 -- if the distance detected is less than 2 centimeters, indicating an impending crash!
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Distance.png>>
 distance :: IO ()
 distance = withArduino True "/dev/cu.usbmodemfd131" $ do
-             setPinMode led  OUTPUT
-             setPinMode trig OUTPUT
-             setPinMode echo INPUT
+             setPinMode sensor INPUT
+             setPinMode led    OUTPUT
              update
- where trig = digital 2
-       echo = digital 3
-       led  = digital 13
-       measure = do pulseOut trig True 2 10
-                    Just d <- pulseIn echo True Nothing
+ where sensor = digital 2
+       led    = digital 13
+       measure = do Just d <- pulse sensor True 10 Nothing
                     let c = microSecondsToCentimeters d
                     liftIO $ putStrLn $ "Distance: " ++ showGFloat (Just 2) c " centimeters."
                     digitalWrite led (c < 2)

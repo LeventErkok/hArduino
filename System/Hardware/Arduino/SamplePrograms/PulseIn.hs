@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 --
 -- Computes the time a button is held pressed, demonstrating the use of
--- the 'pulseIn' function with a time-out.
+-- the 'pulseIn_hostOnly' function with a time-out.
 -------------------------------------------------------------------------------
 
 module System.Hardware.Arduino.SamplePrograms.PulseIn where
@@ -19,7 +19,9 @@ import System.Hardware.Arduino
 
 -- | Computes the amount of time a push-button is connected to
 -- input pin 2 on the Arduino. We will wait for at most 5 seconds,
--- as a further demonstration of the time-out facility.
+-- as a further demonstration of the time-out facility. Note that the
+-- timing is done on the host side, so this measurement is inherently
+-- inaccurate.
 --
 -- The wiring is straightforward: Simply put a push-button between
 -- digital input 2 and +5V, guarded by a 10K resistor:
@@ -32,7 +34,7 @@ pulseDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
  where pb = digital 2
        go = forever $ do
               liftIO $ putStr "Ready, push-and-hold for less than 5 seconds: "
-              mbDur <- pulseIn pb True (Just 5000000)
+              mbDur <- pulseIn_hostTiming pb True (Just 5000000)
               liftIO $ putStrLn $ case mbDur of
                 Nothing -> "Time out!"
                 Just d  -> "Button stayed high for: " ++ show d ++ " micro-seconds"

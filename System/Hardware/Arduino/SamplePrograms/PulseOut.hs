@@ -16,7 +16,9 @@ import Control.Monad.Trans (liftIO)
 
 import System.Hardware.Arduino
 
--- | Send pulses on a led as requested by the user.
+-- | Send pulses on a led as requested by the user. Note that the timing is computed
+-- on the host side, thus the duration of the pulse is subject to some error due to
+-- the Firmata communication overhead.
 --
 -- Wiring: Simply a led on pin 13:
 --
@@ -25,10 +27,10 @@ pulseDemo :: IO ()
 pulseDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
               setPinMode led  OUTPUT
               digitalWrite led False
-              forever pulse
+              forever trigger
  where led  = digital 13
-       pulse = do liftIO $ putStr "Pulse duration? (microseconds) "
-                  d <- liftIO getLine
-                  case reads d of
-                   [(v, "")] -> pulseOut led True 0 v
-                   _         -> liftIO $ putStrLn "Please enter a number."
+       trigger = do liftIO $ putStr "Pulse duration? (microseconds) "
+                    d <- liftIO getLine
+                    case reads d of
+                     [(v, "")] -> pulseOut_hostTiming led True 0 v
+                     _         -> liftIO $ putStrLn "Please enter a number."
