@@ -34,8 +34,8 @@ microSecondsToCentimeters d = 1.7e-2 * fromIntegral d
 
 -- | Measure and display the distance continuously, as reported by an HC-SR04 sensor.
 --
--- Wiring: Simply connect VCC and GND of HC-SR04 to Arduino as usual. The @Trig@ line on the sensor is connected
--- to Arduino pin 2. The @Echo@ line is connected on the board to the @Trig@ line, i.e., they both connect to the
+-- Wiring: Simply connect VCC and GND of HC-SR04 to Arduino as usual. The @Echo@ line on the sensor is connected
+-- to Arduino pin 2. The @Trig@ line is connected on the board to the @Echo@ line, i.e., they both connect to the
 -- same pin on the Arduino. We also have a led on pin 13 that we will light-up
 -- if the distance detected is less than 2 centimeters, indicating an impending crash!
 --
