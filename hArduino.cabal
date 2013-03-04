@@ -35,9 +35,10 @@ Library
   ghc-options     : -Wall
   Build-depends   : base  >= 4 && < 5, serialport >= 0.4.5, bytestring, mtl, unix, containers, time
   Exposed-modules : System.Hardware.Arduino
-                  , System.Hardware.Arduino.LCD
-                  , System.Hardware.Arduino.ShiftRegisters
-                  , System.Hardware.Arduino.SevenSegmentCodes
+                  , System.Hardware.Arduino.Parts
+                  , System.Hardware.Arduino.Parts.LCD
+                  , System.Hardware.Arduino.Parts.ShiftRegisters
+                  , System.Hardware.Arduino.Parts.SevenSegmentCodes
                   , System.Hardware.Arduino.SamplePrograms.Analog
                   , System.Hardware.Arduino.SamplePrograms.Blink
                   , System.Hardware.Arduino.SamplePrograms.Button

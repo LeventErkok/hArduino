@@ -16,7 +16,7 @@ import Data.Char           (isSpace)
 import Numeric             (showHex)
 
 import System.Hardware.Arduino
-import System.Hardware.Arduino.LCD
+import System.Hardware.Arduino.Parts.LCD
 
 -- | Connections for a basic hitachi controller.
 -- See <http://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller> for

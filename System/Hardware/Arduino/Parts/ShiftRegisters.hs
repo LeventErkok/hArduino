@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.ShiftRegisters
+-- Module      :  System.Hardware.Arduino.Parts.ShiftRegisters
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -------------------------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
-module System.Hardware.Arduino.ShiftRegisters(
+module System.Hardware.Arduino.Parts.ShiftRegisters(
      -- * Shift register abstraction
      ShiftRegister(..)
      -- * Supported shift-registers

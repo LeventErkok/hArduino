@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.LCD
+-- Module      :  System.Hardware.Arduino.Parts.LCD
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -16,7 +16,7 @@
 -------------------------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
-module System.Hardware.Arduino.LCD(
+module System.Hardware.Arduino.Parts.LCD(
   -- * LCD types and registration
   LCDController(..), lcdRegister
   -- * Writing text on the LCD

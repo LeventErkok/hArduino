@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------------------------
 -- |
--- Module      :  System.Hardware.Arduino.SevenSegmentCodes
+-- Module      :  System.Hardware.Arduino.Parts.SevenSegmentCodes
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- Character to 7-segment display conversion.
 -------------------------------------------------------------------------------------------------
 
-module System.Hardware.Arduino.SevenSegmentCodes(char2SS) where
+module System.Hardware.Arduino.Parts.SevenSegmentCodes(char2SS) where
 
 import Data.Word (Word8)
 

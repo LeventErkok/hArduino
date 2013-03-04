@@ -20,8 +20,8 @@ import Data.Word           (Word8)
 import System.IO           (hSetBuffering, stdin, BufferMode(NoBuffering))
 
 import System.Hardware.Arduino
-import System.Hardware.Arduino.ShiftRegisters
-import System.Hardware.Arduino.SevenSegmentCodes
+import System.Hardware.Arduino.Parts.ShiftRegisters
+import System.Hardware.Arduino.Parts.SevenSegmentCodes
 
 -- | Connections for the Texas Instruments 74HC595 shift-register. Datasheet: <http://www.ti.com/lit/ds/symlink/sn74hc595.pdf>.
 -- In our circuit, we merely use pins 8 thru 12 on the Arduino to control the 'serial', 'enable', 'rClock', 'sClock', and 'nClear'
