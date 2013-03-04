@@ -8,7 +8,6 @@
  * New parts:
      * Add support for shift-registers
      * Add support for seven-segment displays
-
  * New functions:
      * pulseIn_hostTiming/pulseOut_hostTiming: Send and receive pulses.
          * NB. These functions are inherently inaccurate, as they do
@@ -21,13 +20,11 @@
 	   as of March 2013 does not support this functionality yet.
      * time: Measure the time taken by an Arduino action
      * timeOut: Run an action only for the given-time-out
-
  * Examples
     * PulseIn: Demonstrates the use of reading pulses
     * PulseOut: Demonstrates the use of sending pulses
     * Distance: Measure the distance using an HC-SC04 sensor
     * Seven-segment: Display characters on a seven-segment display
-
  * Other:
     * Bugfix: Remove spurious extra call to user program
     * Rework pin assignment logic, making use of analog/digital
@@ -44,7 +41,6 @@
     * Add support for reading analog values and setting sampling frequency.
     * Add support for LCDs (based on the Hitachi 44780 chip)
     * Better handling for Ctrl-C interrupts
-
  * Examples
     * Counter: Use push buttons to count up and down
     * Analog: Reading analog values
@@ -55,7 +51,6 @@
  * Library
     * Rewrite the communication engine
     * Digital input/output implementation
-
  * Examples
     * Button: Detecting putton pushes
 
@@ -64,6 +59,5 @@
  * Library
     * Initial design
     * Created home page at: http://leventerkok.github.com/hArduino 
-
  * Examples
     * Blink: Hello world!
