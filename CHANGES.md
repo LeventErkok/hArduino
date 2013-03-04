@@ -5,6 +5,10 @@
 
 ### Version 0.4, Not yet released
  
+ * New parts:
+     * Add support for shift-registers
+     * Add support for seven-segment displays
+
  * New functions:
      * pulseIn_hostTiming/pulseOut_hostTiming: Send and receive pulses.
          * NB. These functions are inherently inaccurate, as they do
@@ -22,6 +26,7 @@
     * PulseIn: Demonstrates the use of reading pulses
     * PulseOut: Demonstrates the use of sending pulses
     * Distance: Measure the distance using an HC-SC04 sensor
+    * Seven-segment: Display characters on a seven-segment display
 
  * Other:
     * Bugfix: Remove spurious extra call to user program
