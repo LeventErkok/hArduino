@@ -50,7 +50,7 @@ servo = withArduino False "/dev/cu.usbmodemfd131" $ do
 
 -- | Control a servo, as guided by the input read from a potentiometer. The set-up is similar to the 'servo' example
 -- above, except instead of querying the user for the angle, we use the readings from a potentiometer connected to
--- analog input number 2:
+-- analog input number 2. We used a 10 KOhm potentiometer, but other pots would work just as well too:
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/ServoAnalog.png>>
 servoAnalog :: IO ()
