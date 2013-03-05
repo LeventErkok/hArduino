@@ -111,6 +111,7 @@ data Request = SystemReset                                -- ^ Send system reset
              | DigitalReport      Port Bool               -- ^ Digital report values on port enable/disable
              | AnalogReport       IPin Bool               -- ^ Analog report values on pin enable/disable
              | DigitalPortWrite   Port Word8 Word8        -- ^ Set the values on a port digitally
+             | AnalogPinWrite     IPin  Word8 Word8       -- ^ Send an analog-write; used for servo control
              | SamplingInterval   Word8 Word8             -- ^ Set the sampling interval
              | Pulse              IPin Bool Word32 Word32 -- ^ Request for a pulse reading on a pin, value, duration, timeout
              deriving Show
@@ -458,6 +459,7 @@ getModeActions p ANALOG = do -- This pin just configured for analog
                                    }
                     return (bst', acts1 ++ acts2)
 getModeActions _ OUTPUT = return []
+getModeActions _ SERVO  = return []
 getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode: " ++ show m) ["On pin " ++ show p]
 
 -- | On the arduino, digital pin numbers are in 1-to-1 match with

@@ -39,6 +39,7 @@ Library
                   , System.Hardware.Arduino.Parts.LCD
                   , System.Hardware.Arduino.Parts.ShiftRegisters
                   , System.Hardware.Arduino.Parts.SevenSegmentCodes
+                  , System.Hardware.Arduino.Parts.Servo
                   , System.Hardware.Arduino.SamplePrograms.Analog
                   , System.Hardware.Arduino.SamplePrograms.Blink
                   , System.Hardware.Arduino.SamplePrograms.Button
@@ -48,6 +49,7 @@ Library
                   , System.Hardware.Arduino.SamplePrograms.PulseIn
                   , System.Hardware.Arduino.SamplePrograms.PulseOut
                   , System.Hardware.Arduino.SamplePrograms.SevenSegment
+                  , System.Hardware.Arduino.SamplePrograms.Servo
   Other-modules   : System.Hardware.Arduino.Comm
                   , System.Hardware.Arduino.Data
                   , System.Hardware.Arduino.Firmata

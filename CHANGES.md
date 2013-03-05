@@ -8,6 +8,7 @@
  * New parts:
      * Add support for shift-registers
      * Add support for seven-segment displays
+     * Add support for servo-motors
  * New functions:
      * pulseIn_hostTiming/pulseOut_hostTiming: Send and receive pulses.
          * NB. These functions are inherently inaccurate, as they do
@@ -25,6 +26,7 @@
     * PulseOut: Demonstrates the use of sending pulses
     * Distance: Measure the distance using an HC-SC04 sensor
     * Seven-segment: Display characters on a seven-segment display
+    * Servo: Control a servo board
  * Other:
     * Bugfix: Remove spurious extra call to user program
     * Rework pin assignment logic, making use of analog/digital

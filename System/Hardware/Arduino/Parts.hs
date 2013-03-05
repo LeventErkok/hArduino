@@ -15,10 +15,13 @@ module System.Hardware.Arduino.Parts(
    ,  module System.Hardware.Arduino.Parts.SevenSegmentCodes
       -- * Shift-registers
    ,  module System.Hardware.Arduino.Parts.ShiftRegisters
+      -- * Servo-motors
+   ,  module System.Hardware.Arduino.Parts.Servo
    ) where
 
 import System.Hardware.Arduino.Parts.LCD
 import System.Hardware.Arduino.Parts.SevenSegmentCodes
 import System.Hardware.Arduino.Parts.ShiftRegisters
+import System.Hardware.Arduino.Parts.Servo
 
 {-# ANN module "HLint: ignore Use import/export shortcut" #-}
