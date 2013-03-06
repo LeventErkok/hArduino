@@ -1,18 +1,23 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.3
+* Latest Hackage released version: 0.4
 
-### Version 0.4, Not yet released
+### Version 0.4, 2013-03-05
  
- * New parts:
-     * Add support for shift-registers
-     * Add support for seven-segment displays
-     * Add support for servo-motors
+ * New hardware components supported:
+     * Shift-registers
+     * Seven-segment displays
+     * Servo-motors
+ * New examples:
+    * PulseIn: Demonstrates the use of reading pulses
+    * PulseOut: Demonstrates the use of sending pulses
+    * Distance: Measure the distance using an HC-SC04 sensor
+    * Seven-segment: Display characters on a seven-segment display
+    * Servo: Control a servo board
  * New functions:
      * pulseIn_hostTiming/pulseOut_hostTiming: Send and receive pulses.
-         * NB. These functions are inherently inaccurate, as they do
-	   the measurements on the host. See code for comments.
+         * NB. These functions use host-timing: watch out for accuracy
      * pulse: Send and receive a digital pulse on a pin.
          * This function is more accurate than the pair above, as
 	   it uses a custom Firmata command to measure the pulse.
@@ -21,19 +26,12 @@
 	   as of March 2013 does not support this functionality yet.
      * time: Measure the time taken by an Arduino action
      * timeOut: Run an action only for the given-time-out
- * Examples
-    * PulseIn: Demonstrates the use of reading pulses
-    * PulseOut: Demonstrates the use of sending pulses
-    * Distance: Measure the distance using an HC-SC04 sensor
-    * Seven-segment: Display characters on a seven-segment display
-    * Servo: Control a servo board
  * Other:
     * Bugfix: Remove spurious extra call to user program
-    * Rework pin assignment logic, making use of analog/digital
-      pins much more clearer.
+    * Rework pin assignment logic, making use of analog/digital pins much more clearer.
     * Better exception handling
-    * Remove threadDelay workaround on the Mac. NB. If you are
-      running on OSX, then you need at least GHC 7.6.2!
+    * Remove threadDelay workaround on the Mac. NB. If you are running on OSX, then
+      you need at least GHC 7.6.2!
 
 ### Version 0.3, 2013-02-10
 
