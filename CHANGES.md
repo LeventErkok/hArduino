@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 0.4
 
+### Version 0.5, Not yet released
+
+ * SPI/I2C
+
 ### Version 0.4, 2013-03-05
  
  * New hardware components supported:
