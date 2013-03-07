@@ -27,7 +27,7 @@
      * time: Measure the time taken by an Arduino action
      * timeOut: Run an action only for the given-time-out
 
-### Version 0.4, 2013-02-05
+### Version 0.4, 2013-03-05
 
  * Bugfix: Remove spurious extra call to user program
  * Rework pin assignment logic, making use of analog/digital pins much more clearer.
