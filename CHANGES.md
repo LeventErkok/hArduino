@@ -1,13 +1,9 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.4
+* Latest Hackage released version: 0.5
 
-### Version 0.5, Not yet released
-
- * SPI/I2C
-
-### Version 0.4, 2013-03-05
+### Version 0.5, 2013-03-07
  
  * New hardware components supported:
      * Shift-registers
@@ -30,13 +26,15 @@
 	   as of March 2013 does not support this functionality yet.
      * time: Measure the time taken by an Arduino action
      * timeOut: Run an action only for the given-time-out
- * Other:
-    * Bugfix: Remove spurious extra call to user program
-    * Rework pin assignment logic, making use of analog/digital pins much more clearer.
-    * Better exception handling
-    * Remove threadDelay workaround on the Mac. NB. If you are running on OSX, then
-      you need at least GHC 7.6.2!
 
+### Version 0.4, 2013-02-05
+
+ * Bugfix: Remove spurious extra call to user program
+ * Rework pin assignment logic, making use of analog/digital pins much more clearer.
+ * Better exception handling
+ * Remove threadDelay workaround on the Mac. NB. If you are running on OSX, then
+   you need at least GHC 7.6.2!
+  
 ### Version 0.3, 2013-02-10
 
  * Library

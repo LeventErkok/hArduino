@@ -25,26 +25,19 @@ module System.Hardware.Arduino (
   -- * Running the controller
   withArduino, Arduino
   -- * Programming the Arduino
-  -- ** Basic handshake with the board
-  , queryFirmware
-  -- ** Accessing pins
+  -- ** Pins
   , analog, digital, pin, Pin, PinMode(..), setPinMode
-  -- ** Digital I/O
-  -- *** Writing digital values
-  , digitalWrite
-  -- *** Reading digital values
-  , digitalRead,  pullUpResistor, waitFor, waitAny, waitAnyHigh, waitAnyLow
-  -- *** Receiving and sending pulses, host timing
-  , pulseIn_hostTiming, pulseOut_hostTiming
-  -- ** Pulse trigger and measurement
-  , pulse
-  -- ** Analog Communication
-  -- *** Setting up sampling interval
-  , setAnalogSamplingInterval
-  -- *** Reading analog values
+  -- ** Analog input
   , analogRead
+  -- ** Digital I/O
+  , digitalWrite, digitalRead
+  -- ** Programming with triggers
+  , waitFor, waitAny, waitAnyHigh, waitAnyLow
+  -- ** Receiving and sending pulses
+  , pulse, pulseIn_hostTiming, pulseOut_hostTiming
   -- * Misc utilities
-  , delay, time, timeOut
+  , setAnalogSamplingInterval, pullUpResistor, delay, time, timeOut
+  , queryFirmware
  )
  where
 
