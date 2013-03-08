@@ -61,11 +61,19 @@
 
 <p><a href="http://github.com/LeventErkok/hArduino/blob/master/CHANGES.md">Release notes</a>.</p>
 
-<p>Patches, suggestions, and improvements are most welcome!</p>
+<h2>Installation and set-up</h2>
+
+<ul>
+<li><code>cabal install hArduino</code></li>
+<li>Install the Arduino environment: <a href="http://arduino.cc">http://arduino.cc</a>
+</li>
+<li>Download the "StandardFirmata.ino" on to your Arduino, using the Arduino environment. See <a href="http://firmata.org">http://firmata.org</a> for details.</li>
+<li>Sample programs listed above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you tweak this string properly, pointing to the USB port your Arduino is connected to. (On Linux, this will be <code>/dev/ttyUSB*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</li>
+</ul><p>Patches, suggestions, and improvements are most welcome!</p>
 
 <h2>Thanks</h2>
 
-<p>The following people reported bugs, provided comments/feedback, or contributed to the development of hArduino in various ways: Alexander Altman.</p>
+<p>The following people reported bugs, provided comments/feedback, or contributed to the development of hArduino in various ways: Alexander Altman and Andriy Drozdyuk.</p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/LeventErkok">LeventErkok</a></p>
