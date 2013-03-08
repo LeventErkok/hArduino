@@ -57,20 +57,25 @@
 </li>
 <li>Control a servo motor: <a href="http://hackage.haskell.org/packages/archive/hArduino/latest/doc/html/System-Hardware-Arduino-SamplePrograms-Servo.html">Servo.hs</a>
 </li>
-</ul><p>There is a short <a href="http://www.youtube.com/watch?v=PPa3im44t2g">video</a> (4m29s) demonstrating the blink example.</p>
+</ul><p>NB. Sample programs above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you tweak this string properly, pointing to the USB port your Arduino is connected to. (On Linux, this will be <code>/dev/ttyUSB*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</p>
+
+<p>There is a short <a href="http://www.youtube.com/watch?v=PPa3im44t2g">video</a> (4m29s) demonstrating the blink example.</p>
+
+<p>hArduino has been tested on Mac OSX and Windows 7. Patches, bug reports, and suggestions are most welcome.</p>
 
 <p><a href="http://github.com/LeventErkok/hArduino/blob/master/CHANGES.md">Release notes</a>.</p>
 
-<h2>Installation and set-up</h2>
+<h2>Arduino setup</h2>
+
+<p>To use hArduino, you need to make sure your Arduino board is connected to your computer, and it is running the "StandardFirmata.ino" program that comes with the Arduino tool-kit:</p>
 
 <ul>
-<li><code>cabal install hArduino</code></li>
 <li>Install the Arduino environment: <a href="http://arduino.cc">http://arduino.cc</a>
 </li>
 <li>Download the "StandardFirmata.ino" on to your Arduino, using the Arduino environment. See <a href="http://firmata.org">http://firmata.org</a> for details.</li>
-<li>Sample programs listed above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you tweak this string properly, pointing to the USB port your Arduino is connected to. (On Linux, this will be <code>/dev/ttyUSB*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</li>
-<li>Enjoy!</li>
-</ul><p>Patches, suggestions, and improvements are most welcome!</p>
+<li>[Optional] To make sure everything is in order, you can run the standard test program to ensure your computer can access the Arduino via Firmata: <a href="http://firmata.org/wiki/Main_Page#Firmata_Test_Program">firmata_test</a>
+</li>
+</ul><p>Note that you need to do these steps only <strong>once</strong>. Once StandardFirmata is running on your board, it will stay there even if you disconnect your Arduino or power it down. </p>
 
 <h2>Thanks</h2>
 
