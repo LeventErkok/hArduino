@@ -1,12 +1,13 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.5
+* Latest Hackage released version: 0.6
 
-### Version 0.6, Not yet released
+### Version 0.6, 2013-03-08
 
  * Make hArduino windows friendly by removing dependence
-   on the unix package.
+   on the unix package. Thanks to Andriy Drozdyuk for pointing
+   out the Windows compilation issue.
 
 ### Version 0.5, 2013-03-07
  
