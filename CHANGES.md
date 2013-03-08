@@ -7,7 +7,7 @@
 
  * Make hArduino Windows friendly by removing dependence
    on the unix package. Thanks to Andriy Drozdyuk for pointing
-   out the Windows compilation issue. (Tested on Windows XP.)
+   out the Windows compilation issue. (Tested on Windows 7.)
 
 ### Version 0.5, 2013-03-07
  
