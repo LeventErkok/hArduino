@@ -1,5 +1,5 @@
 Name:          hArduino
-Version:       0.5
+Version:       0.6
 Category:      Hardware
 Synopsis:      Control your Arduino board from Haskell.
 Description:   hArduino library allows Haskell programs to control Arduino boards and
@@ -25,26 +25,29 @@ source-repository head
     location:   git://github.com/LeventErkok/hArduino.git
 
 Library
-  default-language: Haskell2010
-  ghc-options     : -Wall
-  Build-depends   : base  >= 4 && < 5, serialport >= 0.4.5, bytestring, mtl, unix, containers, time
-  Exposed-modules : System.Hardware.Arduino
-                  , System.Hardware.Arduino.Parts
-                  , System.Hardware.Arduino.Parts.LCD
-                  , System.Hardware.Arduino.Parts.ShiftRegisters
-                  , System.Hardware.Arduino.Parts.SevenSegmentCodes
-                  , System.Hardware.Arduino.Parts.Servo
-                  , System.Hardware.Arduino.SamplePrograms.Analog
-                  , System.Hardware.Arduino.SamplePrograms.Blink
-                  , System.Hardware.Arduino.SamplePrograms.Button
-                  , System.Hardware.Arduino.SamplePrograms.Counter
-                  , System.Hardware.Arduino.SamplePrograms.Distance
-                  , System.Hardware.Arduino.SamplePrograms.LCD
-                  , System.Hardware.Arduino.SamplePrograms.Pulse
-                  , System.Hardware.Arduino.SamplePrograms.SevenSegment
-                  , System.Hardware.Arduino.SamplePrograms.Servo
-  Other-modules   : System.Hardware.Arduino.Comm
-                  , System.Hardware.Arduino.Data
-                  , System.Hardware.Arduino.Firmata
-                  , System.Hardware.Arduino.Protocol
-                  , System.Hardware.Arduino.Utils
+  default-language  : Haskell2010
+  default-extensions: CPP
+  ghc-options       : -Wall
+  Build-depends     : base  >= 4 && < 5, serialport >= 0.4.5, bytestring, mtl, containers, time
+  Exposed-modules   : System.Hardware.Arduino
+                    , System.Hardware.Arduino.Parts
+                    , System.Hardware.Arduino.Parts.LCD
+                    , System.Hardware.Arduino.Parts.ShiftRegisters
+                    , System.Hardware.Arduino.Parts.SevenSegmentCodes
+                    , System.Hardware.Arduino.Parts.Servo
+                    , System.Hardware.Arduino.SamplePrograms.Analog
+                    , System.Hardware.Arduino.SamplePrograms.Blink
+                    , System.Hardware.Arduino.SamplePrograms.Button
+                    , System.Hardware.Arduino.SamplePrograms.Counter
+                    , System.Hardware.Arduino.SamplePrograms.Distance
+                    , System.Hardware.Arduino.SamplePrograms.LCD
+                    , System.Hardware.Arduino.SamplePrograms.Pulse
+                    , System.Hardware.Arduino.SamplePrograms.SevenSegment
+                    , System.Hardware.Arduino.SamplePrograms.Servo
+  Other-modules     : System.Hardware.Arduino.Comm
+                    , System.Hardware.Arduino.Data
+                    , System.Hardware.Arduino.Firmata
+                    , System.Hardware.Arduino.Protocol
+                    , System.Hardware.Arduino.Utils
+  if !os(windows)
+    Build-Depends   : unix

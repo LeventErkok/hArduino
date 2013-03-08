@@ -9,6 +9,7 @@
 -- Basic serial communication routines
 -------------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module System.Hardware.Arduino.Comm where
@@ -21,7 +22,9 @@ import Data.Bits            (testBit, (.&.))
 import Data.List            (intercalate, isInfixOf)
 import Data.Maybe           (listToMaybe)
 import Data.Word            (Word8)
+#ifndef mingw32_HOST_OS
 import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
+#endif
 import System.Timeout       (timeout)
 import System.IO            (stderr, hPutStrLn)
 
@@ -52,7 +55,9 @@ withArduino :: Bool       -- ^ If 'True', debugging info will be printed
             -> IO ()
 withArduino verbose fp program =
         do tid <- myThreadId
+#ifndef mingw32_HOST_OS
            _ <- installHandler keyboardSignal (Catch (throwTo tid UserInterrupt)) Nothing
+#endif
            debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
            listenerTid <- newEmptyMVar

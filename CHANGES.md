@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 0.5
 
+### Version 0.6, Not yet released
+
+ * Address Windows compilation issues, by conditionally
+   including the unix module only on unix/mac
+
 ### Version 0.5, 2013-03-07
  
  * New hardware components supported:
