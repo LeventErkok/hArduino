@@ -44,7 +44,7 @@ microSecondsToCentimeters d = 1.716e-2 * fromIntegral d
 -- Wiring: Simply connect VCC and GND of HC-SR04 to Arduino as usual. The @Echo@ line on the sensor is connected
 -- to Arduino pin 2. The @Trig@ line is connected on the board to the @Echo@ line, i.e., they both connect to the
 -- same pin on the Arduino. We also have a led on pin 13 that we will light-up
--- if the distance detected is less than 2 centimeters, indicating an impending crash!
+-- if the distance detected is less than 5 centimeters, indicating an impending crash!
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Distance.png>>
 distance :: IO ()
@@ -59,6 +59,6 @@ distance = withArduino False "/dev/cu.usbmodemfd131" $ do
                       Nothing -> liftIO $ putStrLn "Distance: No measurement received."
                       Just d  -> do let c = microSecondsToCentimeters d
                                     liftIO $ putStrLn $ "Distance: " ++ showGFloat (Just 2) c " centimeters."
-                                    digitalWrite led (c < 2)
+                                    digitalWrite led (c < 5)
        update = forever $ do measure
                              delay 1000
