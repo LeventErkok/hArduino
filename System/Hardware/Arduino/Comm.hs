@@ -15,16 +15,13 @@
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
-import Control.Concurrent   (MVar, myThreadId, ThreadId, throwTo, newChan, newMVar, newEmptyMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_, tryTakeMVar, killThread)
+import Control.Concurrent   (MVar, ThreadId, newChan, newMVar, newEmptyMVar, putMVar, writeChan, readChan, forkIO, modifyMVar_, tryTakeMVar, killThread)
 import Control.Exception    (tryJust, AsyncException(UserInterrupt), handle, SomeException)
 import Control.Monad.State  (runStateT, gets, liftIO, modify)
 import Data.Bits            (testBit, (.&.))
 import Data.List            (intercalate, isInfixOf)
 import Data.Maybe           (listToMaybe)
 import Data.Word            (Word8)
-#ifndef mingw32_HOST_OS
-import System.Posix.Signals (installHandler, keyboardSignal, Handler(Catch))
-#endif
 import System.Timeout       (timeout)
 import System.IO            (stderr, hPutStrLn)
 
@@ -54,11 +51,7 @@ withArduino :: Bool       -- ^ If 'True', debugging info will be printed
             -> Arduino () -- ^ The Haskell controller program to run
             -> IO ()
 withArduino verbose fp program =
-        do tid <- myThreadId
-#ifndef mingw32_HOST_OS
-           _ <- installHandler keyboardSignal (Catch (throwTo tid UserInterrupt)) Nothing
-#endif
-           debugger <- mkDebugPrinter verbose
+        do debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
            listenerTid <- newEmptyMVar
            let Arduino controller = do initOK <- initialize listenerTid

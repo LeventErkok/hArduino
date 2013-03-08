@@ -5,8 +5,8 @@
 
 ### Version 0.6, Not yet released
 
- * Address Windows compilation issues, by conditionally
-   including the unix module only on unix/mac
+ * Make hArduino windows friendly by removing dependence
+   on the unix package.
 
 ### Version 0.5, 2013-03-07
  
