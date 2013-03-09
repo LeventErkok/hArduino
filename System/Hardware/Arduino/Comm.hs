@@ -9,7 +9,6 @@
 -- Basic serial communication routines
 -------------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module System.Hardware.Arduino.Comm where

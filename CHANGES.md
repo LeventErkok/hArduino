@@ -3,6 +3,9 @@
 
 * Latest Hackage released version: 0.6
 
+### Version 0.7, Not yet released
+ * Current development version
+
 ### Version 0.6, 2013-03-08
 
  * Make hArduino Windows friendly by removing dependence

@@ -1,5 +1,5 @@
 Name:          hArduino
-Version:       0.6
+Version:       0.7
 Category:      Hardware
 Synopsis:      Control your Arduino board from Haskell.
 Description:   hArduino library allows Haskell programs to control Arduino boards and
