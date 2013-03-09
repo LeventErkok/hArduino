@@ -5,6 +5,8 @@ Synopsis:      Control your Arduino board from Haskell.
 Description:   hArduino library allows Haskell programs to control Arduino boards and
                peripherals, using the Firmata protocol (<http://firmata.org>).
                .
+               Project page: <http://leventerkok.github.com/hArduino>
+               .
                A short (4m29s) video of the blinking example: <http://www.youtube.com/watch?v=PPa3im44t2g>
                .
                Comments, bug-reports, and patches are welcome.
