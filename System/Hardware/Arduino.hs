@@ -6,20 +6,10 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- (The hArduino library is hosted at <http://leventerkok.github.com/hArduino/>.
--- Comments, bug reports, and patches are always welcome.)
+-- hArduino allows Haskell programs to control Arduino boards (<http://www.arduino.cc>)
+-- and peripherals, using the Firmata protocol (<http://firmata.org>).
 --
--- hArduino: Control Arduino from Haskell, using the Firmata protocol.
---
--- The hArduino library allows construction of Haskell programs that control
--- Arduino boards that are running the (freely available) Firmata program. Note
--- that hArduino does /not/ allow you to run arbitrary Haskell code on the
--- Arduino! It simply allows you to control a board from Haskell, where you
--- can exchange information with the board, send/receive commands from other
--- peripherals connected, etc.
---
--- See <http://www.youtube.com/watch?v=PPa3im44t2g> for a short video (4m29s)
--- of the blink example.
+-- For details, see: <http://leventerkok.github.com/hArduino>.
 -------------------------------------------------------------------------------
 module System.Hardware.Arduino (
   -- * Running the controller
