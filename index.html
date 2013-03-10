@@ -32,7 +32,7 @@
 
 <p><a href="http://travis-ci.org/LeventErkok/hArduino"><img src="https://travis-ci.org/LeventErkok/hArduino.png" alt="Build Status"></a></p>
 
-<p>hArduino allows Haskell programs to control Arduino boards and peripherals, using the <a href="http://firmata.org">Firmata</a> protocol.</p>
+<p>hArduino allows Haskell programs to control <a href="http://arduino.cc/">Arduino</a> boards and peripherals, using the <a href="http://firmata.org">Firmata</a> protocol.</p>
 
 <p>On Hackage (v0.6): <a href="http://hackage.haskell.org/package/hArduino">hArduino</a>.</p>
 
@@ -57,7 +57,7 @@
 </li>
 <li>Control a servo motor: <a href="http://hackage.haskell.org/packages/archive/hArduino/latest/doc/html/System-Hardware-Arduino-SamplePrograms-Servo.html">Servo.hs</a>
 </li>
-</ul><p>NB. Sample programs above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you tweak this string properly, pointing to the USB port your Arduino is connected to. (On Linux, this will look like one of <code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</p>
+</ul><p><code>NB.</code> Sample programs above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you use the correct port name in the call to the <code>withArduino</code> function, pointing to the USB port your Arduino is connected to. (On Linux, this will look like one of <code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</p>
 
 <p>There is a short <a href="http://www.youtube.com/watch?v=PPa3im44t2g">video</a> (4m29s) demonstrating the blink example.</p>
 
@@ -70,11 +70,9 @@
 <p>To use hArduino, you need to make sure your Arduino board is connected to your computer, and it is running the "StandardFirmata.ino" program that comes with the Arduino tool-kit:</p>
 
 <ul>
-<li>Install the Arduino environment: <a href="http://arduino.cc">http://arduino.cc</a>
-</li>
-<li>Download the "StandardFirmata.ino" on to your Arduino, using the Arduino environment. See <a href="http://firmata.org">http://firmata.org</a> for details.</li>
-<li>[Optional] To make sure everything is in order, you can run the standard test program to ensure your computer can access the Arduino via Firmata: <a href="http://firmata.org/wiki/Main_Page#Firmata_Test_Program">firmata_test</a>
-</li>
+<li>Install the Arduino environment: <a href="http://arduino.cc">http://arduino.cc</a>, and start it.</li>
+<li>Using the 'File-&gt;Examples-&gt;Firmata' menu, upload the "StandardFirmata" to your Arduino. See <a href="http://www.firmata.org">http://www.firmata.org</a> for details.</li>
+<li>[Optional] To make sure everything is in order, run the  <a href="http://firmata.org/wiki/Main_Page#Firmata_Test_Program">firmata_test</a> program to ensure your computer can access the Arduino via Firmata.</li>
 </ul><p>Note that you need to do these steps only <strong>once</strong>. Once you get StandardFirmata running on your board, it will stay there even if you disconnect your Arduino from the USB port, or completely power it down. </p>
 
 <h2>Thanks</h2>
