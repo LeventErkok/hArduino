@@ -18,7 +18,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Parts.LCD(
   -- * LCD types and registration
-  LCDController(..), lcdRegister
+  LCD, LCDController(..), lcdRegister
   -- * Writing text on the LCD
   , lcdClear, lcdWrite
   -- * Moving the cursor
