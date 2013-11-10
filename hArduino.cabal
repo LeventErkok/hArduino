@@ -38,6 +38,7 @@ Library
                     , System.Hardware.Arduino.SamplePrograms.Counter
                     , System.Hardware.Arduino.SamplePrograms.Distance
                     , System.Hardware.Arduino.SamplePrograms.LCD
+                    , System.Hardware.Arduino.SamplePrograms.NumGuess
                     , System.Hardware.Arduino.SamplePrograms.Pulse
                     , System.Hardware.Arduino.SamplePrograms.SevenSegment
                     , System.Hardware.Arduino.SamplePrograms.Servo
