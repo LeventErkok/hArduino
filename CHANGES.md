@@ -1,9 +1,10 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.6
+* Latest Hackage released version: 0.7
 
-### Version 0.7, Not yet released
+### Version 0.7, 2013-11-09
+ * Export LCD type, for ease of programming
  * Added the number guessing game using the OSEpp shield.
    Thanks to David Palmer for lending me his shield to play with!
 
