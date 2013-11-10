@@ -4,7 +4,8 @@
 * Latest Hackage released version: 0.6
 
 ### Version 0.7, Not yet released
- * Current development version
+ * Added the number guessing game using the OSEpp shield.
+   Thanks to David Palmer for lending me his shield to play with!
 
 ### Version 0.6, 2013-03-08
 
