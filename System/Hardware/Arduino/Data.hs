@@ -9,7 +9,6 @@
 -- Underlying data structures
 -------------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveFunctor               #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE NamedFieldPuns              #-}
 {-# LANGUAGE RankNTypes                  #-}
