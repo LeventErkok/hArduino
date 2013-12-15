@@ -1,9 +1,9 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.7
+* Latest Hackage released version: 0.8
 
-### Version 0.8, Not yet released
+### Version 0.8, 2013-12-15
  * Add support for Piezo speakers
  * Add simple musical note playing support, and a
    jingle-bells playing example. (Not a great
