@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 0.7
 
+### Version 0.8, Not yet released
+ * Add support for Piezo speakers
+ * Add simple musical note playing support, and a
+   jingle-bells playing example. (Not a great
+   rendering, but still recognizable!)
+
 ### Version 0.7, 2013-11-09
  * Export LCD type, for ease of programming
  * Added the number guessing game using the OSEpp shield.

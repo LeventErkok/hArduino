@@ -457,6 +457,7 @@ getModeActions p ANALOG = do -- This pin just configured for analog
                                    , digitalReportingPins = dPins
                                    }
                     return (bst', acts1 ++ acts2)
+getModeActions _ PWM    = return []
 getModeActions _ OUTPUT = return []
 getModeActions _ SERVO  = return []
 getModeActions p m      = die ("hArduino: getModeActions: TBD: Unsupported mode: " ++ show m) ["On pin " ++ show p]

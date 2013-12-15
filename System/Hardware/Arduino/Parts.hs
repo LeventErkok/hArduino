@@ -17,11 +17,14 @@ module System.Hardware.Arduino.Parts(
    ,  module System.Hardware.Arduino.Parts.ShiftRegisters
       -- * Servo-motors
    ,  module System.Hardware.Arduino.Parts.Servo
+      -- * Piezo-speakers
+   ,  module System.Hardware.Arduino.Parts.Piezo
    ) where
 
 import System.Hardware.Arduino.Parts.LCD
 import System.Hardware.Arduino.Parts.SevenSegmentCodes
 import System.Hardware.Arduino.Parts.ShiftRegisters
 import System.Hardware.Arduino.Parts.Servo
+import System.Hardware.Arduino.Parts.Piezo
 
 {-# ANN module "HLint: ignore Use import/export shortcut" #-}

@@ -264,6 +264,20 @@ analogRead p' = do
               Just (Right v) -> v
               _              -> 0 -- no (correctly-typed) value reported yet, default to 0
 
+-- | Write a PWM analog value to a pin. The argument is an 'Int', indicating the duty cycle.
+-- @0@ means off; @255@ means always on. Intermediate values will create a square wave
+-- on that pin with the given duty-cycle
+analogWrite :: Pin -> Int -> Arduino ()
+analogWrite p' dc = do
+   (p, _) <- convertAndCheckPin "analogWrite" p' PWM
+   when (dc < 0 || dc > 255) $ die ("Invalid duty-cycle value for PWM write on pin " ++ show p)
+                                   [ "Values should be between 0 and 255"
+                                   , "Received: " ++ show dc
+                                   ]
+   send $ AnalogPinWrite p (fromIntegral lsb) (fromIntegral msb)
+  where lsb = dc .&. 0x7f
+        msb = (dc `shiftR` 7) .&. 0x7f
+
 -- | Set the analog sampling interval, in milliseconds. Arduino uses a default of 19ms to sample analog and I2C
 -- signals, which is fine for many applications, but can be modified if needed. The argument
 -- should be a number between @10@ and @16384@; @10@ being the minumum sampling interval supported by Arduino

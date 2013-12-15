@@ -1,5 +1,5 @@
 Name:          hArduino
-Version:       0.7
+Version:       0.8
 Category:      Hardware
 Synopsis:      Control your Arduino board from Haskell.
 Description:   hArduino allows Haskell programs to control Arduino boards (<http://www.arduino.cc>)
@@ -32,11 +32,13 @@ Library
                     , System.Hardware.Arduino.Parts.ShiftRegisters
                     , System.Hardware.Arduino.Parts.SevenSegmentCodes
                     , System.Hardware.Arduino.Parts.Servo
+                    , System.Hardware.Arduino.Parts.Piezo
                     , System.Hardware.Arduino.SamplePrograms.Analog
                     , System.Hardware.Arduino.SamplePrograms.Blink
                     , System.Hardware.Arduino.SamplePrograms.Button
                     , System.Hardware.Arduino.SamplePrograms.Counter
                     , System.Hardware.Arduino.SamplePrograms.Distance
+                    , System.Hardware.Arduino.SamplePrograms.JingleBells
                     , System.Hardware.Arduino.SamplePrograms.LCD
                     , System.Hardware.Arduino.SamplePrograms.NumGuess
                     , System.Hardware.Arduino.SamplePrograms.Pulse

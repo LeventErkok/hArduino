@@ -17,8 +17,8 @@ module System.Hardware.Arduino (
   -- * Programming the Arduino
   -- ** Pins
   , analog, digital, pin, Pin, PinMode(..), setPinMode
-  -- ** Analog input
-  , analogRead
+  -- ** Analog input/output (PWM)
+  , analogRead, analogWrite
   -- ** Digital I/O
   , digitalWrite, digitalRead
   -- ** Programming with triggers
