@@ -1,7 +1,7 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.8
+* Latest Hackage released version: 0.9
 
 ### Version 0.9, 2014-02-09
  * Added example program for Morse encoding.
