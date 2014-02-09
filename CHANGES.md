@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 0.8
 
+### Version 0.9, 2014-02-09
+ * Added example program for Morse encoding.
+   Original idea by Antoine Dumont. Thanks!
+
 ### Version 0.8, 2013-12-15
  * Add support for Piezo speakers
  * Add simple musical note playing support, and a

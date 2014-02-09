@@ -1,12 +1,12 @@
 Name:          hArduino
-Version:       0.8
+Version:       0.9
 Category:      Hardware
 Synopsis:      Control your Arduino board from Haskell.
 Description:   hArduino allows Haskell programs to control Arduino boards (<http://www.arduino.cc>)
                and peripherals, using the Firmata protocol (<http://firmata.org>).
                .
                For details, see: <http://leventerkok.github.com/hArduino>.
-Copyright:     Levent Erkok, 2013
+Copyright:     Levent Erkok, 2013-2014
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
@@ -39,6 +39,7 @@ Library
                     , System.Hardware.Arduino.SamplePrograms.Counter
                     , System.Hardware.Arduino.SamplePrograms.Distance
                     , System.Hardware.Arduino.SamplePrograms.JingleBells
+                    , System.Hardware.Arduino.SamplePrograms.Morse
                     , System.Hardware.Arduino.SamplePrograms.LCD
                     , System.Hardware.Arduino.SamplePrograms.NumGuess
                     , System.Hardware.Arduino.SamplePrograms.Pulse
