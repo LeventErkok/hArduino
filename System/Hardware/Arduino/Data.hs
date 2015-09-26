@@ -14,7 +14,6 @@
 {-# LANGUAGE RankNTypes                  #-}
 module System.Hardware.Arduino.Data where
 
-import Control.Applicative        (Applicative)
 import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, ThreadId)
 import Control.Monad              (when)
 import Control.Monad.State        (StateT, MonadIO, MonadState, gets, liftIO)
