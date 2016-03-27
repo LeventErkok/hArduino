@@ -3,7 +3,7 @@
 
 * Latest Hackage released version: 0.9
 
-### Version 1.0, 2016
+### Version 1.0, Not-yet-released
  * Change USB port in examples to /dev/cu.usbmodem3; which
    seems to be the new MAC naming convention.
 
