@@ -35,7 +35,9 @@
 
 <p>hArduino allows Haskell programs to control <a href="http://arduino.cc/">Arduino</a> boards and peripherals, using the <a href="http://firmata.org">Firmata</a> protocol.</p>
 
-<p>On Hackage (v1.0): <a href="http://hackage.haskell.org/package/hArduino">hArduino</a>.</p>
+<p><strong>Important Note:</strong> The Firmata project has moved on since hArduino was released, and their latest protocol implementation does not work with hArduino. Please use the following (slightly older) copy for hArduino: <a href="http://github.com/LeventErkok/hArduino/blob/master/StandardFirmata/StandardFirmata.ino">Standard Firmata</a>. See also instructions below.</p>
+
+<p>On Hackage (v1.0): <a href="http://hackage.haskell.org/package/hArduino">hArduino</a>. (Released: March 27, 2016.)</p>
 
 <p>Some example programs:</p>
 
@@ -77,11 +79,11 @@
 <h2>
 <a id="arduino-setup" class="anchor" href="#arduino-setup" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Arduino setup</h2>
 
-<p>NB. Unfortunately hArduino does <strong>not</strong> work with most latest releases of the firmata protocol as it is maintained by the Arduino community. This is not unexpected: Firmata moves on, but there isn't enough resources to keep all the clients up-to-date with the latest versions. To use hArduino, you need to make sure your Arduino board is connected to your computer, and the firmata protocol is running on it: </p>
+<p>NB. Unfortunately hArduino does <strong>not</strong> work with latest releases of the firmata protocol as it is maintained by the Arduino community. This is not unexpected: Firmata moves on, but there isn't enough resources to keep all the clients up-to-date with the latest versions. To use hArduino, you need to make sure your Arduino board is connected to your computer, and a custom version of the firmata protocol is running on it: </p>
 
 <ul>
 <li>Install the Arduino environment: <a href="http://arduino.cc/en/Main/Software">http://arduino.cc/en/Main/Software</a>.</li>
-<li>Start the Arduino IDE. Get a copy of the Firmata protocol file, found here: <a href="http://github.com/LeventErkok/hArduino/blob/master/StandardFirmata/StandardFirmata.ino">Firmata Protocol</a>. Load it in the Arduino IDE, and upload it to your board. (Note: Do <strong>NOT</strong> use the File-&gt;Examples-&gt;Firmata menu option to find StandardFirmata; use the specific link to get the version of Firmata that is known to work with HArduino!)</li>
+<li>Start the Arduino IDE. Get a copy of the Firmata protocol file, found here: <a href="http://github.com/LeventErkok/hArduino/blob/master/StandardFirmata/StandardFirmata.ino">Firmata Protocol</a>. Load it in the Arduino IDE, and upload it to your board. (Note: Do <strong>NOT</strong> use the File-&gt;Examples-&gt;Firmata menu option to find StandardFirmata; use the custom version to get the version of Firmata that is known to work with HArduino!)</li>
 <li>[Optional] Run the  <a href="http://firmata.org/wiki/Main_Page#Firmata_Test_Program">firmata_test</a> program to ensure your computer can access the Arduino via Firmata.</li>
 <li>Quit the Arduino IDE. You don't need it running for hArduino to work.</li>
 </ul>
