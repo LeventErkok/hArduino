@@ -1,9 +1,9 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 1.0
+* Latest Hackage released version: 1.1
 
-### Version 1.0, 2016-03-27
+### Version 1.1, 2016-03-27
  * Unfortunately the Firmata project moved on, and hArduino no longer
    works with the latest release of StandardFirmata. This release mainly
    makes a note of this fact, and points to an older version of StandardFirmata
