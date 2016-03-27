@@ -1,14 +1,24 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 0.9
+* Latest Hackage released version: 1.0
 
-### Version 1.0, Not-yet-released
+### Version 1.0, 2016-03-27
+ * Unfortunately the Firmata project moved on, and hArduino no longer
+   works with the latest release of StandardFirmata. This release mainly
+   makes a note of this fact, and points to an older version of StandardFirmata
+   that hArduino has been tested against. Volunteers encouraged to
+   contribute to bring hArduino up-to-date: Contact me if interested!
+
+   In the mean-time, use the following version of StandardFirmata, which is
+   known to work with hArduino: (http://github.com/LeventErkok/hArduino/blob/master/StandardFirmata/StandardFirmata.ino)
+
  * Make the pin-capabilities code robust, by explicitly catching
    (and ignoring) capabilities we do not know/care about. Previously
    we were simply using toEnum, which choked with new versions
-   of Firmata as they added new options. Thanks to hexapoder on
+   of Firmata as they added new options. Thanks to Can Akcura on
    Github for pointing out the issue.
+
 
 ### Version 0.9, 2014-02-09
  * Added example program for Morse encoding.
