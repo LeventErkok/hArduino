@@ -33,6 +33,7 @@ data Port = Port { portNo :: Word8  -- ^ The port number
                  }
                  deriving (Eq, Ord)
 
+-- | Show instance for Port
 instance Show Port where
   show p = "Port" ++ show (portNo p)
 
@@ -41,6 +42,7 @@ data Pin = DigitalPin {userPinNo :: Word8}
          | AnalogPin  {userPinNo :: Word8}
          | MixedPin   {userPinNo :: Word8}
 
+-- | Show instance for Pin
 instance Show Pin where
   show (DigitalPin w) = "DPin" ++ show w
   show (AnalogPin  w) = "APin" ++ show w
@@ -50,6 +52,7 @@ instance Show Pin where
 data IPin = InternalPin { pinNo :: Word8 }
           deriving (Eq, Ord)
 
+-- | Show instance for IPin
 instance Show IPin where
   show (InternalPin w) = "IPin" ++ show w
 
@@ -129,6 +132,7 @@ data Response = Firmware  Word8 Word8 String         -- ^ Firmware version (maj/
               | PulseResponse  IPin Word32           -- ^ Repsonse to a PulseInCommand
               | Unimplemented (Maybe String) [Word8] -- ^ Represents messages currently unsupported
 
+-- | Show instance for Response
 instance Show Response where
   show (Firmware majV minV n)  = "Firmware v" ++ show majV ++ "." ++ show minV ++ " (" ++ n ++ ")"
   show (Capabilities b)        = "Capabilities:\n" ++ show b
@@ -151,6 +155,7 @@ data PinCapabilities  = PinCapabilities {
 -- | What the board is capable of and current settings
 newtype BoardCapabilities = BoardCapabilities (M.Map IPin PinCapabilities)
 
+-- | Show instance for BoardCapabilities
 instance Show BoardCapabilities where
   show (BoardCapabilities m) = intercalate "\n" (map sh (M.toAscList m))
     where sh (p, PinCapabilities{analogPinNumber, allowedModes}) = show p ++ sep ++ unwords [show md | (md, _) <- allowedModes]
