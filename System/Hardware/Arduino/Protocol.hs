@@ -66,8 +66,24 @@ getCapabilities bs = BoardCapabilities $ M.fromList $ zipWith (\p c -> (p, PinCa
                      ([], [])         -> []
                      (cur, 0x7f:rest) -> cur : chunk rest
                      _                -> [xs]
-        pinCaps (x:y:rest) = (toEnum (fromIntegral x), y) : pinCaps rest
+        pinCaps (x:y:rest) = (findMode (fromIntegral x), y) : pinCaps rest
         pinCaps _          = []
+
+        -- Code defensively against capabilities we do not know
+        findMode :: Int -> PinMode
+        findMode 0  = INPUT
+        findMode 1  = OUTPUT
+        findMode 2  = ANALOG
+        findMode 3  = PWM
+        findMode 4  = SERVO
+        findMode 5  = SHIFT
+        findMode 6  = I2C
+        findMode 7  = ONEWIRE      -- ^ NB. No explicit support
+        findMode 8  = STEPPER      -- ^ NB. No explicit support
+        findMode 9  = ENCODER      -- ^ NB. No explicit support
+        findMode 10 = SERIAL       -- ^ NB. No explicit support
+        findMode 11 = PULLUP
+        findMode _  = UNSUPPORTED
 
 -- | Unpackage a Non-SysEx response
 unpackageNonSysEx :: (Int -> IO [Word8]) -> FirmataCmd -> IO Response

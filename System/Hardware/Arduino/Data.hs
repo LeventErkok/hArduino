@@ -91,13 +91,19 @@ pinPortIndex :: IPin -> Word8
 pinPortIndex p = pinNo p `rem` 8
 
 -- | The mode for a pin.
-data PinMode = INPUT    -- ^ Digital input
-             | OUTPUT   -- ^ Digital output
-             | ANALOG   -- ^ Analog input
-             | PWM      -- ^ PWM (Pulse-Width-Modulation) output 
-             | SERVO    -- ^ Servo Motor controller
-             | SHIFT    -- ^ Shift controller
-             | I2C      -- ^ I2C (Inter-Integrated-Circuit) connection
+data PinMode = INPUT        -- ^ Digital input
+             | OUTPUT       -- ^ Digital output
+             | ANALOG       -- ^ Analog input
+             | PWM          -- ^ PWM (Pulse-Width-Modulation) output 
+             | SERVO        -- ^ Servo Motor controller
+             | SHIFT        -- ^ Shift controller
+             | I2C          -- ^ I2C (Inter-Integrated-Circuit) connection
+             | ONEWIRE      -- ^ NB. No explicit support
+             | STEPPER      -- ^ NB. No explicit support
+             | ENCODER      -- ^ NB. No explicit support
+             | SERIAL       -- ^ NB. No explicit support
+             | PULLUP       -- ^ NB. No explicit support
+             | UNSUPPORTED  -- ^ A mode we do not understand or support
              deriving (Eq, Show, Enum)
 
 -- | A request, as sent to Arduino
