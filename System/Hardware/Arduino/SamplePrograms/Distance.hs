@@ -28,7 +28,7 @@ import Numeric             (showGFloat)
 
 import System.Hardware.Arduino
 
--- | Sound travels 343.2 meters per seconds (<http://en.wikipedia.org/wiki/Speed_of_sound>).
+-- | Sound travels 343.2 meters per second (<http://en.wikipedia.org/wiki/Speed_of_sound>).
 -- The echo time is round-trip, from the sensor to the object and back. Thus, if echo is high
 -- for @d@ microseconds, then the distance in centimeters is:
 --
