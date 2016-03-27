@@ -24,7 +24,7 @@ import System.Hardware.Arduino
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Blink.png>>
 blink :: IO ()
-blink = withArduino False "/dev/cu.usbmodemfd131" $ do
+blink = withArduino False "/dev/cu.usbmodem3" $ do
            let led = digital 13
            setPinMode led OUTPUT
            forever $ do digitalWrite led True

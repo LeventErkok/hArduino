@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 0.9
 
+### Version 1.0, Not yet released
+ * Change USB port in examples to /dev/cu.usbmodem3; which
+   seems to be the new MAC naming convention.
+
 ### Version 0.9, 2014-02-09
  * Added example program for Morse encoding.
    Original idea by Antoine Dumont. Thanks!

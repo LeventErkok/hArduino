@@ -35,7 +35,7 @@ import System.Hardware.Arduino.Parts.Servo
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Servo.png>>
 servo :: IO ()
-servo = withArduino False "/dev/cu.usbmodemfd131" $ do
+servo = withArduino False "/dev/cu.usbmodem3" $ do
             s <- attach (digital 9) (Just 600) (Just 2400)
             forever (demo s)
  where demo s = do liftIO $ putStr "Enter l, r or the desired servo angle: "
@@ -54,7 +54,7 @@ servo = withArduino False "/dev/cu.usbmodemfd131" $ do
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/ServoAnalog.png>>
 servoAnalog :: IO ()
-servoAnalog = withArduino False "/dev/cu.usbmodemfd131" $ do
+servoAnalog = withArduino False "/dev/cu.usbmodem3" $ do
                  s <- attach (digital 9) (Just 600) (Just 2400)
                  setPinMode pot ANALOG
                  liftIO $ putStrLn "Adjust the potentiometer to control the servo!"

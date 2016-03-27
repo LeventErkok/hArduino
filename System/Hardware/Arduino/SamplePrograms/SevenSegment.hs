@@ -54,7 +54,7 @@ sr = SR_74HC595 { serial  = digital 8
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/SevenSegment.png>>
 sevenSegment :: IO ()
-sevenSegment = withArduino False "/dev/cu.usbmodemfd131" $ do
+sevenSegment = withArduino False "/dev/cu.usbmodem3" $ do
                   initialize sr
                   liftIO $ do hSetBuffering stdin NoBuffering
                               putStrLn "Seven-Segment-Display demo."

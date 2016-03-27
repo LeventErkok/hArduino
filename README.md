@@ -1,1 +1,1 @@
-Please see http://leventerkok.github.com/hArduino.
+Please see http://leventerkok.github.io/hArduino.

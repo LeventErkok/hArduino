@@ -27,7 +27,7 @@ import System.Hardware.Arduino
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Button.png>>
 button :: IO ()
-button = withArduino False "/dev/cu.usbmodemfd131" $ do
+button = withArduino False "/dev/cu.usbmodem3" $ do
             setPinMode led OUTPUT
             setPinMode pb  INPUT
             go =<< digitalRead pb

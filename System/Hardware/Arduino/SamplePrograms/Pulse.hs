@@ -32,7 +32,7 @@ import System.Hardware.Arduino
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/PulseIn.png>>
 pulseInDemo :: IO ()
-pulseInDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
+pulseInDemo = withArduino False "/dev/cu.usbmodem3" $ do
                setPinMode pb INPUT
                go
  where pb = digital 2
@@ -55,7 +55,7 @@ pulseInDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Blink.png>>
 pulseOutDemo :: IO ()
-pulseOutDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
+pulseOutDemo = withArduino False "/dev/cu.usbmodem3" $ do
               setPinMode led  OUTPUT
               digitalWrite led False
               forever trigger

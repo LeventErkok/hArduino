@@ -26,7 +26,7 @@ import System.Hardware.Arduino
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Analog.png>>
 analogVal :: IO ()
-analogVal = withArduino False "/dev/cu.usbmodemfd131" $ do
+analogVal = withArduino False "/dev/cu.usbmodem3" $ do
                setPinMode led OUTPUT
                setPinMode pot ANALOG
                cur <- analogRead pot

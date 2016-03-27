@@ -69,7 +69,7 @@ transmit p = sequence_ . concatMap code . morsify . decode
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Blink.png>>
 morseDemo :: IO ()
-morseDemo = withArduino False "/dev/cu.usbmodemfd131" $ do
+morseDemo = withArduino False "/dev/cu.usbmodem3" $ do
                 setPinMode led OUTPUT
                 forever send
  where  led  = digital 13

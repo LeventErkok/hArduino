@@ -26,7 +26,7 @@ import System.Hardware.Arduino
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Counter.png>>
 counter :: IO ()
-counter = withArduino False "/dev/cu.usbmodemfd131" $ do
+counter = withArduino False "/dev/cu.usbmodem3" $ do
             setPinMode led   OUTPUT
             setPinMode bUp   INPUT
             setPinMode bDown INPUT
