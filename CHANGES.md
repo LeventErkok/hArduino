@@ -4,9 +4,6 @@
 * Latest Hackage released version: 0.9
 
 ### Version 1.0, Not-yet-released
- * Change USB port in examples to /dev/cu.usbmodem3; which
-   seems to be the new MAC naming convention.
-
  * Make the pin-capabilities code robust, by explicitly catching
    (and ignoring) capabilities we do not know/care about. Previously
    we were simply using toEnum, which choked with new versions

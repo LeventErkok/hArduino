@@ -48,7 +48,7 @@ microSecondsToCentimeters d = 1.716e-2 * fromIntegral d
 --
 --  <<http://github.com/LeventErkok/hArduino/raw/master/System/Hardware/Arduino/SamplePrograms/Schematics/Distance.png>>
 distance :: IO ()
-distance = withArduino False "/dev/cu.usbmodem3" $ do
+distance = withArduino False "/dev/cu.usbmodemFD131" $ do
              setPinMode sensor INPUT
              setPinMode led    OUTPUT
              update

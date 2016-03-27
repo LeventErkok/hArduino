@@ -117,6 +117,6 @@ numGuess lcd light readKey = game
 -- | Entry to the classing number guessing game. Simply initialize the
 -- shield and call our game function.
 guessGame :: IO ()
-guessGame = withArduino False "/dev/cu.usbmodem3" $ do
+guessGame = withArduino False "/dev/cu.usbmodemFD131" $ do
                  (lcd, light, readButton) <- initOSepp
                  numGuess lcd light readButton

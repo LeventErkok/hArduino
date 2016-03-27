@@ -91,7 +91,7 @@ sad = [ "     "
 -- we read from the user and demonstrate other LCD control features offered
 -- by hArduino.
 lcdDemo :: IO ()
-lcdDemo = withArduino False "/dev/cu.usbmodem3" $ do
+lcdDemo = withArduino False "/dev/cu.usbmodemFD131" $ do
               lcd <- lcdRegister hitachi
               happySymbol <- lcdCreateSymbol lcd happy
               sadSymbol   <- lcdCreateSymbol lcd sad

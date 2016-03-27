@@ -37,7 +37,7 @@ import System.Hardware.Arduino.Protocol
 --
 --    * The file path argument should point to the device file that is
 --      associated with the board. ('COM1' on Windows,
---      '/dev/cu.usbmodem3' on Mac, etc.)
+--      '/dev/cu.usbmodemFD131' on Mac, etc.)
 --
 --    * The boolean argument controls verbosity. It should remain
 --      'False' unless you have communication issues. The print-out
