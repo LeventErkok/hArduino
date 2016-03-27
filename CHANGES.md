@@ -3,9 +3,15 @@
 
 * Latest Hackage released version: 0.9
 
-### Version 1.0, Not yet released
+### Version 1.0, 2016
  * Change USB port in examples to /dev/cu.usbmodem3; which
    seems to be the new MAC naming convention.
+
+ * Make the pin-capabilities code robust, by explicitly catching
+   (and ignoring) capabilities we do not know/care about. Previously
+   we were simply using toEnum, which choked with new versions
+   of Firmata as they added new options. Thanks to hexapoder on
+   Github for pointing out the issue.
 
 ### Version 0.9, 2014-02-09
  * Added example program for Morse encoding.
