@@ -6,8 +6,8 @@
     <title>hArduino by LeventErkok</title>
 
     <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -29,13 +29,13 @@
       </header>
       <section>
         <h1>
-<a name="harduino" class="anchor" href="#harduino"><span class="octicon octicon-link"></span></a>hArduino</h1>
+<a id="harduino" class="anchor" href="#harduino" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>hArduino</h1>
 
 <p><a href="http://travis-ci.org/LeventErkok/hArduino"><img src="https://travis-ci.org/LeventErkok/hArduino.png" alt="Build Status"></a></p>
 
 <p>hArduino allows Haskell programs to control <a href="http://arduino.cc/">Arduino</a> boards and peripherals, using the <a href="http://firmata.org">Firmata</a> protocol.</p>
 
-<p>On Hackage (v0.9): <a href="http://hackage.haskell.org/package/hArduino">hArduino</a>.</p>
+<p>On Hackage (v1.0): <a href="http://hackage.haskell.org/package/hArduino">hArduino</a>.</p>
 
 <p>Some example programs:</p>
 
@@ -64,7 +64,9 @@
 </li>
 <li>Control a servo motor: <a href="http://hackage.haskell.org/packages/archive/hArduino/latest/doc/html/System-Hardware-Arduino-SamplePrograms-Servo.html">Servo.hs</a>
 </li>
-</ul><p><code>NB.</code> Sample programs above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you use the correct port name in the call to the <code>withArduino</code> function, pointing to the USB port your Arduino is connected to. (On Linux, this will look like one of <code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</p>
+</ul>
+
+<p><code>NB.</code> Sample programs above use the device <code>/dev/cu.usbmodemfd131</code> to access the Arduino, which happens to be the port I use on my development Mac machine. Make sure you use the correct port name in the call to the <code>withArduino</code> function, pointing to the USB port your Arduino is connected to. (On Linux, this will look like one of <code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> or similar. On Windows, it will look something like <code>COM3</code>.)</p>
 
 <p>There is a short <a href="http://www.youtube.com/watch?v=PPa3im44t2g">video</a> (4m29s) demonstrating the blink example.</p>
 
@@ -73,21 +75,23 @@
 <p><a href="http://github.com/LeventErkok/hArduino/blob/master/CHANGES.md">Release notes</a>.</p>
 
 <h2>
-<a name="arduino-setup" class="anchor" href="#arduino-setup"><span class="octicon octicon-link"></span></a>Arduino setup</h2>
+<a id="arduino-setup" class="anchor" href="#arduino-setup" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Arduino setup</h2>
 
-<p>To use hArduino, you need to make sure your Arduino board is connected to your computer, and the firmata protocol is running on it: </p>
+<p>NB. Unfortunately hArduino does <strong>not</strong> work with most latest releases of the firmata protocol as it is maintained by the Arduino community. This is not unexpected: Firmata moves on, but there isn't enough resources to keep all the clients up-to-date with the latest versions. To use hArduino, you need to make sure your Arduino board is connected to your computer, and the firmata protocol is running on it: </p>
 
 <ul>
 <li>Install the Arduino environment: <a href="http://arduino.cc/en/Main/Software">http://arduino.cc/en/Main/Software</a>.</li>
-<li>Start the Arduino IDE. Using the 'File-&gt;Examples-&gt;Firmata' menu, upload "StandardFirmata" to your board. </li>
+<li>Start the Arduino IDE. Get a copy of the Firmata protocol file, found here: <a href="http://github.com/LeventErkok/hArduino/blob/master/StandardFirmata/StandardFirmata.ino">Firmata Protocol</a>. Load it in the Arduino IDE, and upload it to your board. (Note: Do <strong>NOT</strong> use the File-&gt;Examples-&gt;Firmata menu option to find StandardFirmata; use the specific link to get the version of Firmata that is known to work with HArduino!)</li>
 <li>[Optional] Run the  <a href="http://firmata.org/wiki/Main_Page#Firmata_Test_Program">firmata_test</a> program to ensure your computer can access the Arduino via Firmata.</li>
 <li>Quit the Arduino IDE. You don't need it running for hArduino to work.</li>
-</ul><p>Note that you need to do these steps only <strong>once</strong>. Once you get StandardFirmata running on your board, it will stay there even if you disconnect your Arduino from the USB port, or completely power down your computer.</p>
+</ul>
+
+<p>Note that you need to do these steps only <strong>once</strong>. Once you get StandardFirmata running on your board, it will stay there even if you disconnect your Arduino from the USB port, or completely power down your computer.</p>
 
 <h2>
-<a name="thanks" class="anchor" href="#thanks"><span class="octicon octicon-link"></span></a>Thanks</h2>
+<a id="thanks" class="anchor" href="#thanks" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Thanks</h2>
 
-<p>The following people reported bugs, provided comments/feedback, or contributed to the development of hArduino in various ways: Alexander Altman, Andriy Drozdyuk, and Antoine Dumont. Also, thanks to David Palmer for lending me his OSEPP LCD shield to play with!</p>
+<p>The following people reported bugs, provided comments/feedback, or contributed to the development of hArduino in various ways: Can Akçura, Alexander Altman, Andriy Drozdyuk, and Antoine Dumont. Also, thanks to David Palmer for lending me his OSEPP LCD shield to play with!</p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/LeventErkok">LeventErkok</a></p>
