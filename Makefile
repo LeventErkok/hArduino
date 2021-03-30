@@ -45,5 +45,8 @@ hlint: install
 ghcid:
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
 
+ci:
+	haskell-ci hArduino.cabal --no-tests --no-benchmarks --no-doctest --no-hlint --email-notifications
+
 tags:
 	$(call mkTags)
