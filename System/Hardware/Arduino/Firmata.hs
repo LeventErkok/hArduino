@@ -172,8 +172,8 @@ waitGeneric ps = do
 --
 -- NB. As of March 2 2013; StandardFirmata that's distributed with the Arduino-App does /not/ support the Pulse-In command.
 -- However, there is a patch to add this command; see: <http://github.com/rwldrn/johnny-five/issues/18> for details.
--- If you want to use hArduino's 'pulseIn' command, then you /have/ to install the above patch. Also see the function
--- 'pulseIn_hostOnly', which works with the distributed StandardFirmata: It implements a version that is not as
+-- If you want to use hArduino's @pulseIn@ command, then you /have/ to install the above patch. Also see the function
+-- @pulseIn_hostOnly@, which works with the distributed StandardFirmata: It implements a version that is not as
 -- accurate in its timing, but might be sufficient if high precision is not required.
 pulse :: Pin -> Bool -> Int -> Maybe Int -> Arduino (Maybe Int)
 pulse p' v duration mbTo = do

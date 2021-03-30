@@ -16,8 +16,8 @@ import Control.Monad.Trans (liftIO)
 import System.Hardware.Arduino
 
 -- | Two push-button switches, controlling a counter value. We will increment
--- the counter if the first one ('bUp') is pressed, and decrement the value if the
--- second one ('bDown') is pressed. We also have a led connected to pin 13 (either use
+-- the counter if the first one (@bUp@) is pressed, and decrement the value if the
+-- second one (@bDown@) is pressed. We also have a led connected to pin 13 (either use
 -- the internal or connect an external one), that we light up when the counter value
 -- is 0.
 --
@@ -37,7 +37,7 @@ counter = withArduino False "/dev/cu.usbmodemFD131" $ do
        update curVal = do
                 liftIO $ print curVal
                 digitalWrite led (curVal == 0)
-                [up, down] <- waitAnyHigh [bUp, bDown]
+                ~[up, down] <- waitAnyHigh [bUp, bDown]
                 let newVal = case (up, down) of
                                (True,  True)  -> curVal    -- simultaneous press
                                (True,  False) -> curVal+1

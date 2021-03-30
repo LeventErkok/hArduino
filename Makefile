@@ -3,7 +3,7 @@
 # The hArduino library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
-TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs')
+TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Setup.hs)
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_hArduino.hs)
 CABAL     = cabal
 TIME      = /usr/bin/time
@@ -17,27 +17,23 @@ endef
 all: install
 
 install: $(DEPSRCS) Makefile
-	@-ghc-pkg unregister hArduino
 	$(call mkTags)
-	@$(CABAL) configure --disable-library-profiling
-	@(set -o pipefail; $(CABAL) build --ghc-options=-Werror 2>&1)
-	@$(CABAL) copy
-	@$(CABAL) register
+	@$(CABAL) new-install --lib
 
 test: install
 	@echo "*** Starting inline tests.."
-	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
+	@$(TIME) doctest -package mtl -package serialport ${TSTSRCS}
+
 sdist: install
-	@(set -o pipefail; $(CABAL) sdist)
+	$(CABAL) sdist
 
 veryclean: clean
-	@-ghc-pkg unregister hArduino
 
 clean:
 	@rm -rf dist
 
 docs:
-	@(set -o pipefail; $(CABAL) haddock --executables --haddock-option=--no-warnings --hyperlink-source 2>&1)
+	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
 release: clean install sdist hlint test docs
 	@echo "*** hArduino is ready for release!"
@@ -45,6 +41,9 @@ release: clean install sdist hlint test docs
 hlint: install
 	@echo "Running HLint.."
 	@hlint System -rhlintReport.html -i "Use otherwise" -i "Parse error"
+
+ghcid:
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
 
 tags:
 	$(call mkTags)

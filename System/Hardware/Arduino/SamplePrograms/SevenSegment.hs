@@ -25,7 +25,7 @@ import System.Hardware.Arduino.Parts.SevenSegmentCodes
 
 -- | Connections for the Texas Instruments 74HC595 shift-register. Datasheet: <http://www.ti.com/lit/ds/symlink/sn74hc595.pdf>.
 -- In our circuit, we merely use pins 8 thru 12 on the Arduino to control the 'serial', 'enable', 'rClock', 'sClock', and 'nClear'
--- lines, respectively. Since we do not need to read the output of the shift-register, we leave the 'bits' field unconnected.
+-- lines, respectively. Since we do not need to read the output of the shift-register, we leave the 'mbBits' field unconnected.
 sr :: SR_74HC595
 sr = SR_74HC595 { serial  = digital 8
                 , nEnable = digital 9

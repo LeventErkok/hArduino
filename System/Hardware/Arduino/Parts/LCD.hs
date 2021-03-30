@@ -54,6 +54,8 @@ import System.Hardware.Arduino.Firmata
 
 import qualified System.Hardware.Arduino.Utils as U
 
+import System.Exit (exitFailure)
+
 ---------------------------------------------------------------------------------------
 -- Low level interface, not available to the user
 ---------------------------------------------------------------------------------------
@@ -117,7 +119,8 @@ getController lcd = do
   bs  <- gets boardState
   err <- gets bailOut
   liftIO $ withMVar bs $ \bst -> case lcd `M.lookup` lcds bst of
-                                   Nothing -> err ("hArduino: Cannot locate " ++ show lcd) []
+                                   Nothing -> do err ("hArduino: Cannot locate " ++ show lcd) []
+                                                 exitFailure
                                    Just ld -> return $ lcdController ld
 
 -- | Send a command to the LCD controller
@@ -265,7 +268,8 @@ updateDisplayData what (f, g) lcd = do
     , LCDData {lcdDisplayControl = newC, lcdDisplayMode = newM, lcdController = c})
         <- liftIO $ modifyMVar bs $ \bst ->
                        case lcd `M.lookup` lcds bst of
-                         Nothing -> err ("hArduino: Cannot locate " ++ show lcd) []
+                         Nothing -> do err ("hArduino: Cannot locate " ++ show lcd) []
+                                       exitFailure
                          Just ld@LCDData{lcdDisplayControl, lcdDisplayMode}
                             -> do let ld' = ld { lcdDisplayControl = f lcdDisplayControl
                                                , lcdDisplayMode    = g lcdDisplayMode
@@ -402,7 +406,8 @@ lcdCreateSymbol lcd glyph
        err <- gets bailOut
        (i, c) <- liftIO $ modifyMVar bs $ \bst ->
                     case lcd `M.lookup` lcds bst of
-                      Nothing -> err ("hArduino: Cannot locate " ++ show lcd) []
+                      Nothing -> do err ("hArduino: Cannot locate " ++ show lcd) []
+                                    exitFailure
                       Just ld@LCDData{lcdGlyphCount, lcdController}
                               -> do let ld' = ld { lcdGlyphCount = lcdGlyphCount + 1 }
                                     return (bst{lcds = M.insert lcd ld' (lcds bst)}, (lcdGlyphCount, lcdController))

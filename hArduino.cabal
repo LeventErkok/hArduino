@@ -1,3 +1,4 @@
+Cabal-Version: 2.2
 Name:          hArduino
 Version:       1.1
 Category:      Hardware
@@ -7,7 +8,7 @@ Description:   hArduino allows Haskell programs to control Arduino boards (<http
                .
                For details, see: <http://leventerkok.github.com/hArduino>.
 Copyright:     Levent Erkok, 2013-2014
-License:       BSD3
+License:       BSD-3-Clause
 License-file:  LICENSE
 Stability:     Experimental
 Author:        Levent Erkok
@@ -15,7 +16,6 @@ Homepage:      http://leventerkok.github.com/hArduino
 Bug-reports:   http://github.com/LeventErkok/hArduino/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
-Cabal-Version: >= 1.14
 Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 source-repository head

@@ -12,6 +12,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE NamedFieldPuns              #-}
 {-# LANGUAGE RankNTypes                  #-}
+
 module System.Hardware.Arduino.Data where
 
 import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, ThreadId)
@@ -28,10 +29,12 @@ import qualified Data.Set as S
 
 import System.Hardware.Arduino.Utils
 
+import System.Exit (exitFailure)
+
 -- | A port (containing 8 pins)
-data Port = Port { portNo :: Word8  -- ^ The port number
-                 }
-                 deriving (Eq, Ord)
+newtype Port = Port { portNo :: Word8  -- ^ The port number
+                    }
+                    deriving (Eq, Ord)
 
 -- | Show instance for Port
 instance Show Port where
@@ -49,7 +52,7 @@ instance Show Pin where
   show (MixedPin   w) = "Pin"  ++ show w
 
 -- | A pin on the Arduino, as viewed by the library; i.e., real-pin numbers
-data IPin = InternalPin { pinNo :: Word8 }
+newtype IPin = InternalPin { pinNo :: Word8 }
           deriving (Eq, Ord)
 
 -- | Show instance for IPin
@@ -208,14 +211,14 @@ data BoardState = BoardState {
 
 -- | State of the computation
 data ArduinoState = ArduinoState {
-                message       :: String -> IO ()                      -- ^ Current debugging routine
-              , bailOut       :: forall a. String -> [String] -> IO a -- ^ Clean-up and quit with a hopefully informative message
-              , port          :: SerialPort                           -- ^ Serial port we are communicating on
-              , firmataID     :: String                               -- ^ The ID of the board (as identified by the Board itself)
-              , boardState    :: MVar BoardState                      -- ^ Current state of the board
-              , deviceChannel :: Chan Response                        -- ^ Incoming messages from the board
-              , capabilities  :: BoardCapabilities                    -- ^ Capabilities of the board
-              , listenerTid   :: MVar ThreadId                        -- ^ ThreadId of the listener
+                message       :: String -> IO ()             -- ^ Current debugging routine
+              , bailOut       :: String -> [String] -> IO () -- ^ Clean-up and quit with a hopefully informative message
+              , port          :: SerialPort                  -- ^ Serial port we are communicating on
+              , firmataID     :: String                      -- ^ The ID of the board (as identified by the Board itself)
+              , boardState    :: MVar BoardState             -- ^ Current state of the board
+              , deviceChannel :: Chan Response               -- ^ Incoming messages from the board
+              , capabilities  :: BoardCapabilities           -- ^ Capabilities of the board
+              , listenerTid   :: MVar ThreadId               -- ^ ThreadId of the listener
               }
 
 -- | The Arduino monad.
@@ -230,7 +233,8 @@ debug s = do f <- gets message
 -- | Bailing out: print the given string on stdout and die
 die :: String -> [String] -> Arduino a
 die m ms = do f <- gets bailOut
-              liftIO $ f m ms
+              liftIO $ do f m ms
+                          exitFailure
 
 -- | Which modes does this pin support?
 getPinModes :: IPin -> Arduino [PinMode]
@@ -247,8 +251,9 @@ getPinData p = do
   err <- gets bailOut
   liftIO $ withMVar bs $ \bst ->
      case p `M.lookup` pinStates bst of
-       Nothing -> err ("Trying to access " ++ show p ++ " without proper configuration.")
-                      ["Make sure that you use 'setPinMode' to configure this pin first."]
+       Nothing -> do err ("Trying to access " ++ show p ++ " without proper configuration.")
+                         ["Make sure that you use 'setPinMode' to configure this pin first."]
+                     exitFailure
        Just pd -> return pd
 
 -- | Given a pin, collect the digital value corresponding to the

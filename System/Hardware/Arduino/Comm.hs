@@ -9,8 +9,10 @@
 -- Basic serial communication routines
 -------------------------------------------------------------------------------
 
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module System.Hardware.Arduino.Comm where
 
 import Control.Monad        (when, forever)
@@ -36,8 +38,8 @@ import System.Hardware.Arduino.Protocol
 -- | Run the Haskell program to control the board:
 --
 --    * The file path argument should point to the device file that is
---      associated with the board. ('COM1' on Windows,
---      '/dev/cu.usbmodemFD131' on Mac, etc.)
+--      associated with the board. (@COM1@ on Windows,
+--      @/dev/cu.usbmodemFD131@ on Mac, etc.)
 --
 --    * The boolean argument controls verbosity. It should remain
 --      'False' unless you have communication issues. The print-out
@@ -93,10 +95,10 @@ withArduino verbose fp program =
                 cleanUp listenerTid
  where catchCtrlC UserInterrupt = Just ()
        catchCtrlC _             = Nothing
+
        cleanUp tid = do mbltid <- tryTakeMVar tid
-                        case mbltid of
-                          Just t -> killThread t
-                          _      -> return ()
+                        maybe (pure ()) killThread mbltid
+
        bailOut tid m ms = do cleanUp tid
                              error $ "\n*** hArduino:ERROR: " ++ intercalate "\n*** " (m:ms)
 
@@ -163,9 +165,9 @@ setupListener = do
                                                    return bst{ pinStates = M.insert p PinData{pinMode = ANALOG, pinValue = Just (Right v)} (pinStates bst) }
                   DigitalMessage p l h -> do dbg $ "Updating digital port " ++ show p ++ " values with " ++ showByteList [l,h]
                                              modifyMVar_ bs $ \bst -> do
-                                                  let upd o od | p /= pinPort o               = od   -- different port, no change
-                                                               | pinMode od `notElem` [INPUT] = od   -- not an input pin, ignore
-                                                               | True                         = od{pinValue = Just (Left newVal)}
+                                                  let upd o od | p /= pinPort o      = od   -- different port, no change
+                                                               | pinMode od /= INPUT = od   -- not an input pin, ignore
+                                                               | True                = od{pinValue = Just (Left newVal)}
                                                         where idx = pinPortIndex o
                                                               newVal | idx <= 6 = l `testBit` fromIntegral idx
                                                                      | True     = h `testBit` fromIntegral (idx - 7)
@@ -195,17 +197,20 @@ initialize ltid = do
      -- To accommodate for the case when standard-Firmata may not be running,
      -- we will time out after 10 seconds of waiting, which should be plenty
      mbTo <- handshake QueryFirmware (Just (5000000 :: Int))
-                       (\r -> case r of {Firmware{} -> True; _ -> False})
+                       (\case Firmware{} -> True
+                              _          -> False)
                        (\(Firmware v1 v2 m) -> modify (\s -> s{firmataID = "Firmware v" ++ show v1 ++ "." ++ show v2 ++ "(" ++ m ++ ")"}))
      case mbTo of
        Nothing -> return False  -- timed out
        Just () -> do -- Step 3: Send a capabilities request
                      _ <- handshake CapabilityQuery Nothing
-                                    (\r -> case r of {Capabilities{} -> True; _ -> False})
+                                    (\case Capabilities{} -> True
+                                           _              -> False)
                                     (\(Capabilities c) -> modify (\s -> s{capabilities = c}))
                      -- Step 4: Send analog-mapping query
                      _ <- handshake AnalogMappingQuery Nothing
-                                    (\r -> case r of {AnalogMapping{} -> True; _ -> False})
+                                    (\case AnalogMapping{} -> True
+                                           _               -> False)
                                     (\(AnalogMapping as) -> do BoardCapabilities m <- gets capabilities
                                                                -- need to put capabilities to both outer and inner state
                                                                let caps = BoardCapabilities (M.mapWithKey (mapAnalog as) m)
