@@ -10,8 +10,9 @@
 -------------------------------------------------------------------------------
 
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module System.Hardware.Arduino.Comm where
 
@@ -54,12 +55,12 @@ withArduino :: Bool       -- ^ If 'True', debugging info will be printed
 withArduino verbose fp program =
         do debugger <- mkDebugPrinter verbose
            debugger $ "Accessing arduino located at: " ++ show fp
-           listenerTid <- newEmptyMVar
-           let Arduino controller = do initOK <- initialize listenerTid
+           lTid <- newEmptyMVar
+           let Arduino controller = do initOK <- initialize lTid
                                        if initOK
                                           then program
                                           else error "Communication time-out (5s) expired."
-           handle (\(e::SomeException) -> do cleanUp listenerTid
+           handle (\(e::SomeException) -> do cleanUp lTid
                                              let selfErr = "*** hArduino" `isInfixOf` show e
                                              hPutStrLn stderr $ if selfErr
                                                                 then dropWhile (== '\n') (show e)
@@ -67,7 +68,7 @@ withArduino verbose fp program =
                                                                      ++ concatMap ("\n*** " ++) [ "Make sure your Arduino is connected to " ++ fp
                                                                                                 , "And StandardFirmata is running on it!"
                                                                                                 ]) $
-             S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \port -> do
+             S.withSerial fp S.defaultSerialSettings{S.commSpeed = S.CS57600} $ \curPort -> do
                 let initBoardState = BoardState {
                                          boardCapabilities    = BoardCapabilities M.empty
                                        , analogReportingPins  = S.empty
@@ -80,27 +81,27 @@ withArduino verbose fp program =
                 dc <- newChan
                 let initState = ArduinoState {
                                    message       = debugger
-                                 , bailOut       = bailOut listenerTid
-                                 , port          = port
+                                 , bailOut       = bailOutF lTid
+                                 , port          = curPort
                                  , firmataID     = "Unknown"
                                  , capabilities  = BoardCapabilities M.empty
                                  , boardState    = bs
                                  , deviceChannel = dc
-                                 , listenerTid   = listenerTid
+                                 , listenerTid   = lTid
                               }
                 res <- tryJust catchCtrlC $ runStateT controller initState
                 case res of
                   Left () -> putStrLn "hArduino: Caught Ctrl-C, quitting.."
                   _       -> return ()
-                cleanUp listenerTid
+                cleanUp lTid
  where catchCtrlC UserInterrupt = Just ()
        catchCtrlC _             = Nothing
 
        cleanUp tid = do mbltid <- tryTakeMVar tid
                         maybe (pure ()) killThread mbltid
 
-       bailOut tid m ms = do cleanUp tid
-                             error $ "\n*** hArduino:ERROR: " ++ intercalate "\n*** " (m:ms)
+       bailOutF tid m ms = do cleanUp tid
+                              error $ "\n*** hArduino:ERROR: " ++ intercalate "\n*** " (m:ms)
 
 -- | Send down a request.
 send :: Request -> Arduino ()

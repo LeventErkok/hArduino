@@ -9,7 +9,8 @@
 -- Implementation of the firmata protocol
 -------------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module System.Hardware.Arduino.Firmata where
 
 import Control.Concurrent  (newEmptyMVar, readMVar, withMVar, modifyMVar_, threadDelay)

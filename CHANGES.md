@@ -1,7 +1,10 @@
 * Hackage: (http://hackage.haskell.org/package/hArduino)
 * GitHub:  (http://leventerkok.github.com/hArduino)
 
-* Latest Hackage released version: 1.1
+* Latest Hackage released version: 1.2
+
+### Version 1.2, 2022-12-14
+ * Make hArduino compile with recent versions of GHC
 
 ### Version 1.1, 2016-03-27
  * Unfortunately the Firmata project moved on, and hArduino no longer

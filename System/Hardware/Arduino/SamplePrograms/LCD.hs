@@ -9,6 +9,8 @@
 -- Basic demo of an Hitachi HD44780 LCD
 -------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module System.Hardware.Arduino.SamplePrograms.LCD where
 
 import Control.Monad.Trans (liftIO)

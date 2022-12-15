@@ -13,6 +13,8 @@
 {-# LANGUAGE NamedFieldPuns              #-}
 {-# LANGUAGE RankNTypes                  #-}
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module System.Hardware.Arduino.Data where
 
 import Control.Concurrent         (Chan, MVar, modifyMVar, modifyMVar_, withMVar, ThreadId)

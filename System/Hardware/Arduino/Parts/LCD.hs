@@ -16,6 +16,9 @@
 -------------------------------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
+
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module System.Hardware.Arduino.Parts.LCD(
   -- * LCD types and registration
   LCD, LCDController(..), lcdRegister
@@ -399,7 +402,7 @@ newtype LCDSymbol = LCDSymbol Word8
 -- >
 lcdCreateSymbol :: LCD -> [String] -> Arduino LCDSymbol
 lcdCreateSymbol lcd glyph
-  | length glyph /= 8 || any (/= 5) (map length glyph)
+  | length glyph /= 8 || any ((/= 5) . length) glyph
   = die "hArduino: lcdCreateSymbol: Invalid glyph description: must be 8x5!" ("Received:" : glyph)
   | True
   = do bs  <- gets boardState

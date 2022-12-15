@@ -9,7 +9,6 @@
 -- Abstractions for piezo speakers. 
 -------------------------------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
 module System.Hardware.Arduino.Parts.Piezo(
    -- * Declaring a piezo speaker
      Piezo, speaker

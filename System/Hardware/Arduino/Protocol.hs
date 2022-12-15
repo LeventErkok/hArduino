@@ -9,6 +9,8 @@
 -- Internal representation of the firmata protocol.
 -------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module System.Hardware.Arduino.Protocol(package, unpackageSysEx, unpackageNonSysEx) where
 
 import Data.Word (Word8)

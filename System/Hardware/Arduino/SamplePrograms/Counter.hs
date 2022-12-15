@@ -9,6 +9,8 @@
 -- Demonstrates using two push-buttons to count up and down.
 -------------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module System.Hardware.Arduino.SamplePrograms.Counter where
 
 import Control.Monad.Trans (liftIO)

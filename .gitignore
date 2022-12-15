@@ -9,5 +9,5 @@ cabal-dev
 tags
 TAGS
 parts
-cabal.project.local
 dist-newstyle/
+cabal.project.local*

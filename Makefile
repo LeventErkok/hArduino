@@ -22,7 +22,7 @@ install: $(DEPSRCS) Makefile
 
 test: install
 	@echo "*** Starting inline tests.."
-	@$(TIME) doctest -package mtl -package serialport ${TSTSRCS}
+	#@$(TIME) doctest -package mtl -package serialport ${TSTSRCS}
 
 sdist: install
 	$(CABAL) sdist
@@ -30,7 +30,7 @@ sdist: install
 veryclean: clean
 
 clean:
-	@rm -rf dist
+	@rm -rf dist-newstyle
 
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
