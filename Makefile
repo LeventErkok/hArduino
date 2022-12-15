@@ -20,10 +20,6 @@ install: $(DEPSRCS) Makefile
 	$(call mkTags)
 	@$(CABAL) new-install --lib
 
-test: install
-	@echo "*** Starting inline tests.."
-	#@$(TIME) doctest -package mtl -package serialport ${TSTSRCS}
-
 sdist: install
 	$(CABAL) sdist
 
@@ -35,7 +31,7 @@ clean:
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
-release: clean install sdist hlint test docs
+release: clean install sdist hlint docs
 	@echo "*** hArduino is ready for release!"
 
 hlint: install

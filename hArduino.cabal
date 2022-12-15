@@ -7,7 +7,7 @@ Description:   hArduino allows Haskell programs to control Arduino boards (<http
                and peripherals, using the Firmata protocol (<http://firmata.org>).
                .
                For details, see: <http://leventerkok.github.io/hArduino>.
-Copyright:     Levent Erkok, 2013-2014
+Copyright:     Levent Erkok, 2013-2022
 License:       BSD-3-Clause
 License-file:  LICENSE
 Stability:     Experimental
@@ -17,8 +17,6 @@ Bug-reports:   http://github.com/LeventErkok/hArduino/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
 Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
-
-Tested-With        : GHC==8.10.2, GHC==8.8.4
 
 source-repository head
     type:       git
